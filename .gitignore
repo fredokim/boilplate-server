@@ -16,3 +16,7 @@ coverage
 # against what the code produces. Ignoring it would make that check fail on a
 # fresh clone with "no spec found" — and, worse, leave nothing for a consumer to
 # read.
+
+# The frontend build, copied here so the server can serve it from one origin.
+# A build artefact of the sibling package, not source.
+client/

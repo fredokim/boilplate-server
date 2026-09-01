@@ -69,6 +69,19 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   BODY_LIMIT: string = '1mb';
 
+  /**
+   * Directory holding the built frontend, served from this process so the app
+   * and the API share an origin.
+   *
+   * Empty means "API only", which is what a dev session wants: Vite serves the
+   * client and proxies /api here. It matters in production because the refresh
+   * token is a `sameSite: 'lax'` cookie — split the two across hosts and the
+   * browser stops sending it, so a session dies the moment its access token
+   * expires.
+   */
+  @IsString()
+  CLIENT_DIR: string = '';
+
   @IsBoolean()
   @Transform(toBoolean)
   SWAGGER_ENABLED: boolean = true;

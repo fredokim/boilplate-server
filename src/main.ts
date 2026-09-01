@@ -8,6 +8,7 @@ import { AppConfig } from './config/app.config';
 import { setupSwagger, SWAGGER_PATH } from './swagger';
 import { useWebSocketAdapter } from './websocketAdapter';
 import { installShutdownHandlers } from './shutdown';
+import { serveClient } from './staticClient';
 import { LOGGER, type LoggerPort } from './common/logging/logger.port';
 
 /**
@@ -27,12 +28,43 @@ async function bootstrap(): Promise<void> {
   app.useLogger(logLevelsFor(config.logLevel));
 
   /**
-   * Security headers. The content security policy is disabled here on purpose:
-   * this process serves JSON and Swagger, not the application, and a CSP that
-   * only covers the API would give the impression the frontend is protected when
-   * it is not. The frontend's own host is where that belongs.
+   * Security headers.
+   *
+   * The CSP follows what this process actually serves. With CLIENT_DIR set it
+   * serves the application, so a policy belongs here — this is the frontend's
+   * host. Without it the process serves JSON and Swagger, and a CSP covering
+   * only an API would suggest a protection the app does not have.
+   *
+   * `style-src` allows inline: the grid layout library writes element styles
+   * directly, and nothing in the bundle can change that. `script-src` does not,
+   * which is the half that matters for injected markup.
    */
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+  const servesClient = config.clientDir !== '';
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: servesClient
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", 'data:', 'blob:'],
+              mediaSrc: ["'self'", 'data:', 'blob:', 'https:'],
+              connectSrc: ["'self'", 'ws:', 'wss:'],
+              objectSrc: ["'none'"],
+              frameAncestors: ["'none'"],
+            },
+          }
+        : false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
+  // After helmet, so the static responses carry the same headers as the API's.
+  // Registered before the router, which is safe because the fallback hands
+  // everything under the global prefix straight back to Nest.
+  const clientDir = serveClient(app, config.clientDir);
+
   app.setGlobalPrefix('api');
   useWebSocketAdapter(app);
 
@@ -65,6 +97,8 @@ async function bootstrap(): Promise<void> {
 
   const logger = new Logger('Bootstrap');
   logger.log(`API listening on http://localhost:${String(config.port)}/api`);
+
+  if (clientDir) logger.log(`Serving the client from ${clientDir}`);
   if (config.swaggerEnabled) {
     logger.log(`API docs on http://localhost:${String(config.port)}/${SWAGGER_PATH}`);
   }

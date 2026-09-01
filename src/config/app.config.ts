@@ -36,6 +36,11 @@ export class AppConfig {
     return this.config.get('BODY_LIMIT', { infer: true });
   }
 
+  /** Absolute or cwd-relative path to the built frontend. Empty disables it. */
+  get clientDir(): string {
+    return this.config.get('CLIENT_DIR', { infer: true });
+  }
+
   get logLevel(): LogLevel {
     return this.config.get('LOG_LEVEL', { infer: true });
   }
