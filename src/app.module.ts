@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { GraphModule } from './graph/graph.module';
 import { LiveModule } from './live/live.module';
+import { UserModule } from './user/user.module';
 import { AllExceptionsFilter } from './common/filters/allExceptions.filter';
 import { RequestLoggingInterceptor } from './common/interceptors/requestLogging.interceptor';
 import { ResponseEnvelopeInterceptor } from './common/interceptors/responseEnvelope.interceptor';
@@ -27,7 +28,7 @@ import { HealthModule } from './health/health.module';
  * covers the envelope mapping too.
  */
 @Module({
-  imports: [AppConfigModule, LoggingModule, DatabaseModule, AuthModule, DashboardModule, GraphModule, LiveModule, HealthModule],
+  imports: [AppConfigModule, LoggingModule, DatabaseModule, AuthModule, DashboardModule, GraphModule, LiveModule, UserModule, HealthModule],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: RequestLoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ResponseEnvelopeInterceptor },
