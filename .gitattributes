@@ -1,0 +1,5 @@
+# The drift check compares this file byte for byte against what the code
+# generates. Pinning LF keeps a Windows checkout from rewriting it and failing
+# the check for a reason that has nothing to do with the API.
+openapi.json text eol=lf
+prisma/migrations/**/*.sql text eol=lf

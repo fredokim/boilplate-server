@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Without an explicit rootDir, TypeScript infers it from the common parent of
+    // every input file. Including prisma/ or scripts/ therefore lifts the root to
+    // the package directory and emits dist/src/main.js, which is not where
+    // `npm start` looks. Pinning both keeps the entrypoint at dist/main.js.
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "prisma", "src/generated", "**/*.spec.ts", "**/*.e2e-spec.ts"]
+}

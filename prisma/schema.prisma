@@ -1,0 +1,435 @@
+// Prisma schema for the React boilerplate backend.
+//
+// Models arrive with the module that owns them. This step adds the auth module's
+// three: Role, User, and RefreshSession.
+
+generator client {
+  provider = "prisma-client-js"
+
+  // An explicit output rather than the implicit node_modules/.prisma. Prisma is
+  // moving this way — Prisma 7 requires it — and it also sidesteps a concrete
+  // failure here: the implicit client is reached through a `#main-entry-point`
+  // subpath import, and Node cannot resolve `#` imports when the project path
+  // contains non-ASCII characters. This repository lives under a path that does.
+  // Generated output is not committed; postinstall regenerates it.
+  output = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Permissions are plain strings so they match what the frontend already checks
+/// against — `dashboard:read`, `user:write`, and so on. Keeping them as data on
+/// the role rather than as an enum means a new permission is a seed change, not
+/// a migration.
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  permissions String[]
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id String @id @default(uuid())
+
+  /// Stored lowercased and trimmed. The unique constraint is what actually
+  /// prevents two accounts differing only by case, so normalisation happens
+  /// before every write and every lookup.
+  email String @unique
+
+  name String
+
+  /// Never selected by default — see the global `omit` in PrismaService. Reading
+  /// it requires asking for it explicitly, which is a visible act at the call site.
+  passwordHash String
+
+  /// A disabled account can still authenticate its password correctly, so this is
+  /// checked separately and reported as its own error code.
+  isActive Boolean @default(true)
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  sessions         RefreshSession[]
+  dashboards       Dashboard[]
+  graphs           Graph[]
+  chatMessages     ChatMessage[]
+  playbackSessions PlaybackSession[]
+  personalizations DashboardPersonalization[]
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([roleId])
+}
+
+/// One row per issued refresh token.
+///
+/// Tokens rotate: every refresh revokes the row it was presented with and issues
+/// a new one in the same `familyId`. Presenting an already-revoked token means
+/// either a replay or a stolen token being used alongside the legitimate one, and
+/// the whole family is revoked in response — the legitimate user is logged out
+/// too, which is the correct trade when a token has provably leaked.
+model RefreshSession {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Shared by every token descended from one login. Revoking a family ends that
+  /// login everywhere without touching the user's other sessions.
+  familyId String
+
+  /// Only the hash is stored. A database dump therefore does not yield usable
+  /// refresh tokens. Unique so a hash collision or a duplicate insert fails loudly.
+  tokenHash String @unique
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  /// Set when this row is rotated out, so a reuse can be traced to its successor.
+  replacedById String?
+
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  userAgent String?
+  ipAddress String?
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+/// A shared dashboard definition: widgets, layout, filters.
+///
+/// Stored as versioned JSON rather than as relational widget rows. Widgets are a
+/// discriminated union whose config differs per type, and the frontend already
+/// owns that shape — modelling it relationally would mean a migration every time
+/// a widget gains a field, and two definitions of the same thing to keep in step.
+/// The trade is that the database cannot validate it, so the server does: nothing
+/// is written or returned without passing `dashboardSchema.ts`.
+model Dashboard {
+  id String @id
+
+  title      String
+  ownerId    String
+  owner      User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  visibility String @default("private")
+
+  /// Bumped when the JSON shape changes. A row written by a newer server is
+  /// refused rather than silently misread.
+  schemaVersion Int @default(1)
+
+  /// Validated against DashboardDefinitionDto on the way in and on the way out.
+  definition Json
+
+  /// Optimistic lock. Every write requires the version the client last read.
+  version Int @default(1)
+
+  personalizations DashboardPersonalization[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+/// One row per user per dashboard, holding only the difference from the shared
+/// definition — hidden widgets, per-widget overrides, added widgets, filters.
+///
+/// Storing a whole copy of the dashboard per user would mean a change to the
+/// shared definition never reaching anyone who had personalised it.
+model DashboardPersonalization {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dashboardId String
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  schemaVersion Int @default(1)
+
+  /// The active preset id and the preset list, matching the frontend's
+  /// DashboardPersonalization type exactly.
+  activePresetId String
+  presets        Json
+
+  version Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, dashboardId])
+  @@index([dashboardId])
+}
+
+/// A topology graph: the structure users edit.
+///
+/// `version` and `sequence` are separate on purpose and mean different things.
+/// `version` is the optimistic lock on the *structure* — it moves when someone
+/// edits nodes or edges. `sequence` is the monotonic counter for the *runtime
+/// event stream* — it moves when a status or metric changes. Sharing one counter
+/// would make every metric tick invalidate every open editor.
+model Graph {
+  id String @id
+
+  title      String
+  ownerId    String
+  owner      User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  visibility String @default("private")
+
+  version Int @default(1)
+
+  /// Highest event sequence issued for this graph. Allocated inside the same
+  /// transaction that stores the event, so two concurrent mutations cannot be
+  /// handed the same number.
+  sequence Int @default(0)
+
+  nodes  GraphNode[]
+  edges  GraphEdge[]
+  events TopologyEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model GraphNode {
+  /// Surrogate key. The id a client uses is `nodeId`, unique per graph — the
+  /// same node id may exist in two different graphs.
+  id String @id @default(uuid())
+
+  graphId String
+  graph   Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  nodeId String
+  type   String
+  label  String
+
+  positionX Float
+  positionY Float
+
+  metadata Json
+
+  @@unique([graphId, nodeId])
+  @@index([graphId])
+}
+
+model GraphEdge {
+  id String @id @default(uuid())
+
+  graphId String
+  graph   Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  edgeId String
+
+  /// Client-facing node ids, not surrogate keys. A foreign key to GraphNode
+  /// would be tighter, but edges are written in the same transaction as the
+  /// nodes they reference and the service validates that every endpoint exists —
+  /// which it must do anyway to produce GRAPH_INVALID_EDGE rather than a
+  /// constraint violation the client cannot act on.
+  sourceNodeId String
+  targetNodeId String
+
+  label    String?
+  metadata Json
+
+  @@unique([graphId, edgeId])
+  @@index([graphId])
+  @@index([graphId, sourceNodeId])
+}
+
+/// One row per runtime change, kept so a client that was disconnected can replay
+/// what it missed instead of refetching the whole snapshot.
+///
+/// This is a bounded replay buffer, not event sourcing: current runtime state
+/// lives in `GraphNodeRuntime`/`GraphEdgeRuntime`, and these rows are pruned.
+/// Nothing is rebuilt by folding them.
+model TopologyEvent {
+  id String @id @default(uuid())
+
+  graphId String
+  graph   Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  /// The idempotency key the client dedupes on.
+  eventId String @unique
+
+  /// Monotonic per graph. Gaps mean lost events; going backwards is a bug.
+  sequence Int
+
+  entity   String
+  entityId String
+  kind     String
+  payload  Json
+
+  occurredAt DateTime @default(now())
+
+  @@unique([graphId, sequence])
+  @@index([graphId, sequence])
+  @@index([occurredAt])
+}
+
+/// Current runtime state per node, so a snapshot is a read rather than a fold.
+model GraphNodeRuntime {
+  id String @id @default(uuid())
+
+  graphId String
+  nodeId  String
+
+  status      String   @default("unknown")
+  metrics     Json
+  /// Sequence of the event that last wrote this row. Lets a late event be
+  /// discarded without consulting the event table.
+  sequence    Int      @default(0)
+  lastUpdated DateTime @default(now())
+
+  @@unique([graphId, nodeId])
+  @@index([graphId])
+}
+
+model GraphEdgeRuntime {
+  id String @id @default(uuid())
+
+  graphId String
+  edgeId  String
+
+  status      String   @default("unknown")
+  metrics     Json
+  sequence    Int      @default(0)
+  lastUpdated DateTime @default(now())
+
+  @@unique([graphId, edgeId])
+  @@index([graphId])
+}
+
+/// A live broadcast. This server is a control plane, not a media server: it holds
+/// the manifest URL an external packager produced and the policy around it, and
+/// never encodes, proxies, or serves a segment.
+model Broadcast {
+  id String @id
+
+  title       String
+  description String?
+
+  /// `scheduled`, `live`, or `ended`. Authoritative — liveness is never inferred
+  /// from timestamps, because a broadcast that started late or overran would then
+  /// be reported wrongly by the clock rather than by the operator.
+  status String @default("scheduled")
+
+  /// `hls` or `progressive`, matching the frontend's VideoSource union.
+  sourceType String @default("hls")
+
+  /// Treated as a secret. Never logged, and only handed out through a playback
+  /// session so it can be scoped and expired.
+  manifestUrl String
+
+  /// Whether the player may seek backwards. A property of the packager's output,
+  /// so the server states it rather than letting the client guess.
+  dvrEnabled Boolean @default(true)
+
+  /// Monotonic per broadcast, for chat. Unrelated to any graph sequence.
+  chatSequence Int @default(0)
+
+  /// Set when the operator moves the broadcast to `live` / `ended`, for audit.
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  scheduledFor DateTime?
+
+  messages         ChatMessage[]
+  playbackSessions PlaybackSession[]
+  moderation       ChatModerationAction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+/// A short-lived grant to play one broadcast.
+///
+/// Exists so the manifest URL is never a permanent capability: it is handed out
+/// against an authenticated request, expires on its own, and can be revoked
+/// without touching the broadcast.
+model PlaybackSession {
+  id String @id @default(uuid())
+
+  broadcastId String
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([broadcastId])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model ChatMessage {
+  id String @id @default(uuid())
+
+  broadcastId String
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  /// Supplied by the client so a retried send is stored once. Unique per
+  /// broadcast, which is what makes the retry idempotent rather than duplicating.
+  clientMessageId String
+
+  /// Monotonic per broadcast. Allocated in the same transaction as the insert.
+  sequence Int
+
+  body String
+
+  /// Server clock. The client's timestamp is not trusted and not stored — it is
+  /// trivially wrong and trivially forged, and ordering depends on this.
+  sentAt DateTime @default(now())
+
+  /// Moderation is a separate column from the body, so a removed message can
+  /// still be audited. Nothing is hard-deleted by moderation.
+  deletedAt DateTime?
+  deletedBy String?
+
+  @@unique([broadcastId, clientMessageId])
+  @@unique([broadcastId, sequence])
+  @@index([broadcastId, sequence])
+}
+
+/// An operator action, kept whether or not the thing it acted on still exists.
+model ChatModerationAction {
+  id String @id @default(uuid())
+
+  broadcastId String
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  /// `delete_message`, `mute_user`, `unmute_user`.
+  action String
+
+  moderatorId String
+  targetId    String
+
+  reason String?
+
+  /// For a mute. Null means indefinite.
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([broadcastId, action])
+  @@index([broadcastId, targetId])
+}

@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "declaration": false,
+    "removeComments": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    // Deliberately not incremental. nest-cli deletes outDir before building but
+    // leaves .tsbuildinfo behind, so the next build sees a valid cache, believes
+    // the outputs already exist, and emits nothing — a clean build that silently
+    // produces no dist. A few seconds of rebuild is worth not having that.
+    "incremental": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+
+    /* Linting. Deliberately close to the frontend tsconfig, with one exception
+       documented in ARCHITECTURE.md: exactOptionalPropertyTypes is off here
+       because Nest and Swagger decorator metadata types are not written for it. */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictBindCallApply": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["src/**/*", "test/**/*", "prisma/**/*"],
+  // src/generated holds Prisma output. It is still resolved when imported
+  // (and skipLibCheck covers its .d.ts); excluding it only keeps generated
+  // code out of the root file set, where strict flags would flag it.
+  "exclude": ["node_modules", "dist", "src/generated"]
+}

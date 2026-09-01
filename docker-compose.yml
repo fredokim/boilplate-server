@@ -1,0 +1,24 @@
+# Local PostgreSQL for development only. These credentials are deliberately
+# throwaway and match .env.example; nothing here is used outside a dev machine.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: react-boilerplate-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: boilerplate
+      POSTGRES_PASSWORD: boilerplate
+      POSTGRES_DB: boilerplate
+    ports:
+      # Change the host side if 5432 is already taken, and update DATABASE_URL.
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U boilerplate -d boilerplate']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

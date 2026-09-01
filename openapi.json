@@ -1,0 +1,4927 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "description": "Returns a short-lived access token in the body and sets the rotating refresh token as an HttpOnly cookie. The refresh token never appears in a response body.",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many sign-in attempts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sign in with email and password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "description": "Rotates the refresh token: the presented one is revoked as the replacement is issued. Presenting an already-used token revokes the whole session family.",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The refresh token is missing, expired, or already used.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "rb_refresh": []
+          }
+        ],
+        "summary": "Exchange the refresh cookie for a new access token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "description": "Idempotent. Public because a client whose access token has already expired must still be able to log out.",
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LogoutResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "End the current session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "description": "Re-reads the user from the database, so a role change or a disabled account takes effect at once.",
+        "operationId": "AuthController_session",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read the current user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/dashboard/summary": {
+      "get": {
+        "operationId": "DashboardDataController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DashboardSummaryDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dashboard data is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Counts for the dashboard summary card",
+        "tags": [
+          "dashboard-data"
+        ]
+      }
+    },
+    "/api/dashboard/kpi": {
+      "get": {
+        "description": "Accepts sourceId, or the legacy metric alias the current frontend sends.",
+        "operationId": "DashboardDataController_kpi",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sales-summary",
+                "active-users",
+                "traffic-series",
+                "conversion-series",
+                "recent-events",
+                "incident-events"
+              ]
+            }
+          },
+          {
+            "name": "metric",
+            "required": false,
+            "in": "query",
+            "description": "Legacy alias resolved by the controller. Unknown values fall back to a default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "quarter"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/KpiDataDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dashboard data is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A single KPI value",
+        "tags": [
+          "dashboard-data"
+        ]
+      }
+    },
+    "/api/dashboard/chart": {
+      "get": {
+        "operationId": "DashboardDataController_chart",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sales-summary",
+                "active-users",
+                "traffic-series",
+                "conversion-series",
+                "recent-events",
+                "incident-events"
+              ]
+            }
+          },
+          {
+            "name": "metric",
+            "required": false,
+            "in": "query",
+            "description": "Legacy alias resolved by the controller. Unknown values fall back to a default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "quarter"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SeriesDataDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dashboard data is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A time series for a chart widget",
+        "tags": [
+          "dashboard-data"
+        ]
+      }
+    },
+    "/api/dashboard/table": {
+      "get": {
+        "operationId": "DashboardDataController_table",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sales-summary",
+                "active-users",
+                "traffic-series",
+                "conversion-series",
+                "recent-events",
+                "incident-events"
+              ]
+            }
+          },
+          {
+            "name": "metric",
+            "required": false,
+            "in": "query",
+            "description": "Legacy alias resolved by the controller. Unknown values fall back to a default.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "quarter"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TableDataDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dashboard data is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rows for a table widget",
+        "tags": [
+          "dashboard-data"
+        ]
+      }
+    },
+    "/api/dashboards/{dashboardId}": {
+      "get": {
+        "description": "A dashboard the caller may not see answers 404, not 403 — a distinct 403 would confirm the id exists.",
+        "operationId": "DashboardController_findOne",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DashboardResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard, or not visible to the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read a dashboard definition",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "put": {
+        "description": "Requires the version last read. A mismatch answers 409 with the current version in details.",
+        "operationId": "DashboardController_save",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDashboardDefinitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DashboardResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller can see the dashboard but does not own it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The dashboard changed since it was read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The definition failed schema validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace a dashboard definition",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/dashboards/{dashboardId}/personalization": {
+      "get": {
+        "description": "Creates the default personalization on first access rather than answering 404.",
+        "operationId": "DashboardController_findPersonalization",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PersonalizationResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard, or not visible to the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read the caller's personalization",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "put": {
+        "operationId": "DashboardController_savePersonalization",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePersonalizationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PersonalizationResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The personalization changed since it was read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The presets failed schema validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace the whole personalization",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/dashboards/{dashboardId}/presets": {
+      "post": {
+        "description": "Copies the active preset unless another is named.",
+        "operationId": "DashboardController_createPreset",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePresetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PersonalizationResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The personalization changed since it was read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a preset",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/dashboards/{dashboardId}/presets/{presetId}": {
+      "patch": {
+        "operationId": "DashboardController_renamePreset",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "presetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenamePresetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PersonalizationResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such preset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The personalization changed since it was read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a preset",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "delete": {
+        "description": "The last preset cannot be deleted; deleting the active one moves the selection.",
+        "operationId": "DashboardController_deletePreset",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "presetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePresetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PersonalizationResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such preset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The last preset cannot be deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a preset",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/dashboards/{dashboardId}/presets/{presetId}/select": {
+      "post": {
+        "operationId": "DashboardController_selectPreset",
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "presetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectPresetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PersonalizationResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such preset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Make a preset the active one",
+        "tags": [
+          "dashboards"
+        ]
+      }
+    },
+    "/api/graphs": {
+      "get": {
+        "operationId": "GraphController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GraphSummaryDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List graphs the caller can see",
+        "tags": [
+          "graphs"
+        ]
+      },
+      "post": {
+        "operationId": "GraphController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGraphDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GraphDetailDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A graph with that id already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create an empty graph",
+        "tags": [
+          "graphs"
+        ]
+      }
+    },
+    "/api/graphs/{graphId}": {
+      "get": {
+        "description": "A graph the caller may not see answers 404, never 403.",
+        "operationId": "GraphController_findOne",
+        "parameters": [
+          {
+            "name": "graphId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GraphDetailDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such graph, or not visible to the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read a graph with its nodes and edges",
+        "tags": [
+          "graphs"
+        ]
+      },
+      "delete": {
+        "operationId": "GraphController_remove",
+        "parameters": [
+          {
+            "name": "graphId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GraphSummaryDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such graph.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a graph, its content, and its events",
+        "tags": [
+          "graphs"
+        ]
+      }
+    },
+    "/api/graphs/{graphId}/content": {
+      "put": {
+        "description": "Atomic. Invariants are checked before the transaction opens, so an invalid edge costs nothing and names itself.",
+        "operationId": "GraphController_replaceContent",
+        "parameters": [
+          {
+            "name": "graphId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceGraphContentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GraphDetailDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller can see the graph but does not own it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The structure changed since it was read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A dangling endpoint, a self-loop, or a duplicate edge.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace every node and edge",
+        "tags": [
+          "graphs"
+        ]
+      }
+    },
+    "/api/graphs/{graphId}/topology/snapshot": {
+      "get": {
+        "description": "Read directly from runtime rows, not folded from events. `revision` is the sequence the snapshot reflects — subscribe from it.",
+        "operationId": "GraphController_snapshot",
+        "parameters": [
+          {
+            "name": "graphId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TopologySnapshotDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such graph.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Current runtime state",
+        "tags": [
+          "graphs"
+        ]
+      }
+    },
+    "/api/graphs/{graphId}/topology/resync": {
+      "get": {
+        "description": "The HTTP counterpart of the WebSocket replay. Answers `resync` when the gap is older than the retained window, which means the client must take a fresh snapshot rather than assume continuity.",
+        "operationId": "GraphController_resync",
+        "parameters": [
+          {
+            "name": "graphId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lastSequence",
+            "required": true,
+            "in": "query",
+            "description": "The highest sequence the client already applied.",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TopologyReplayDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such graph.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Events missed since a sequence",
+        "tags": [
+          "graphs"
+        ]
+      }
+    },
+    "/api/graphs/{graphId}/topology/events": {
+      "post": {
+        "description": "Allocates a sequence, stores the event, updates runtime state, and fans it out — the first three in one transaction. Exists so a monitoring agent can feed the stream; the UI only reads.",
+        "operationId": "GraphController_publish",
+        "parameters": [
+          {
+            "name": "graphId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishTopologyEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TopologyReplayDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such graph.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish a runtime event",
+        "tags": [
+          "graphs"
+        ]
+      }
+    },
+    "/api/live/broadcasts": {
+      "get": {
+        "operationId": "LiveController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BroadcastDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List broadcasts",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/live/broadcasts/{broadcastId}": {
+      "get": {
+        "description": "Deliberately without the manifest URL — that is only issued through a playback session.",
+        "operationId": "LiveController_findOne",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BroadcastDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such broadcast.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read broadcast metadata",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/live/broadcasts/{broadcastId}/playback-session": {
+      "post": {
+        "description": "Returns the manifest URL with an expiry. Only a live broadcast is playable: a scheduled one has no stream yet and an ended one has none any more.",
+        "operationId": "LiveController_createPlaybackSession",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PlaybackSessionDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The broadcast is not currently live.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request a short-lived playback grant",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/live/broadcasts/{broadcastId}/status": {
+      "post": {
+        "description": "Idempotent: asking for the status it already has succeeds and changes nothing. `ended` is terminal.",
+        "operationId": "LiveController_transition",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionBroadcastDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BroadcastDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A transition the lifecycle does not allow.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move a broadcast through its lifecycle",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/live/broadcasts/{broadcastId}/chat/messages": {
+      "get": {
+        "description": "Cursor pagination by sequence, not offset — an offset shifts under a live chat and would skip or repeat rows.",
+        "operationId": "LiveController_history",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "afterSequence",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatHistoryDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such broadcast.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read chat history",
+        "tags": [
+          "live"
+        ]
+      },
+      "post": {
+        "description": "Idempotent on clientMessageId: a retry after a timeout returns the stored message rather than posting twice.",
+        "operationId": "LiveController_send",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendChatMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatMessageDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The author is muted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Chat is closed because the broadcast ended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Sending too quickly.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a message",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/live/broadcasts/{broadcastId}/chat/messages/{messageId}": {
+      "delete": {
+        "description": "Marks it deleted and emits a tombstone. The row is retained so the action stays auditable; clients that already have the message drop it on the tombstone.",
+        "operationId": "LiveController_deleteMessage",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModerateMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatMessageDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a message",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/live/broadcasts/{broadcastId}/chat/mutes": {
+      "post": {
+        "description": "Omit durationMs for an indefinite mute.",
+        "operationId": "LiveController_mute",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MuteUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatMessageDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mute a user in this chat",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/live/broadcasts/{broadcastId}/chat/mutes/{targetId}": {
+      "delete": {
+        "description": "Recorded as its own action rather than by deleting the mute, so the history survives.",
+        "operationId": "LiveController_unmute",
+        "parameters": [
+          {
+            "name": "broadcastId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatMessageDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lift a mute",
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "description": "Informational endpoint for dashboards and humans. Always answers 200 and reports a degraded status rather than failing, so a poller does not have to unpack an error envelope. Use /health/live and /health/ready for probes.",
+        "operationId": "HealthController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HealthSummaryDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Aggregate health summary",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/health/live": {
+      "get": {
+        "description": "Succeeds whenever the process can serve requests. Checks no dependency by design.",
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LivenessDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness probe",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/health/ready": {
+      "get": {
+        "description": "Verifies the database round-trips. Answers 503 with the failing checks in error.details when it does not.",
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ReadinessDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Request validation failed."
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "Present only when the error carries structured context."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Readiness probe",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "React Boilerplate API",
+    "description": "Backend for the React boilerplate. Every response uses the shared envelope: `{ success: true, data }` on success and `{ success: false, error: { code, message, details? } }` on failure. HTTP status describes the transport outcome; `error.code` describes the domain outcome.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "rb_refresh": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "rb_refresh"
+      }
+    },
+    "schemas": {
+      "AuthUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a3f1c2e4-..."
+          },
+          "email": {
+            "type": "string",
+            "example": "demo@example.com"
+          },
+          "name": {
+            "type": "string",
+            "example": "Demo Maker"
+          },
+          "permissions": {
+            "example": [
+              "dashboard:read",
+              "user:read"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "permissions"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUserResponseDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "user"
+        ]
+      },
+      "LoginRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "demo@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "correct horse battery staple",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LogoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "revoked": {
+            "type": "boolean",
+            "example": true,
+            "description": "False when there was no live session to end. Logout is idempotent either way."
+          }
+        },
+        "required": [
+          "revoked"
+        ]
+      },
+      "SessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AuthUserResponseDto"
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "DashboardSummaryDto": {
+        "type": "object",
+        "properties": {
+          "activeUsers": {
+            "type": "number"
+          },
+          "invitedUsers": {
+            "type": "number"
+          },
+          "blockedUsers": {
+            "type": "number"
+          },
+          "apiLatencyMs": {
+            "type": "number"
+          },
+          "contractErrorRate": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "activeUsers",
+          "invitedUsers",
+          "blockedUsers",
+          "apiLatencyMs",
+          "contractErrorRate"
+        ]
+      },
+      "KpiDataDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "kpi"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "trend": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ]
+      },
+      "SeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ]
+      },
+      "SeriesDataDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "series"
+            ]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesPointDto"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "points"
+        ]
+      },
+      "TableColumnDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "event",
+              "owner",
+              "status"
+            ]
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ]
+      },
+      "TableRowDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event",
+          "owner",
+          "status"
+        ]
+      },
+      "TableDataDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "table"
+            ]
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableColumnDto"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TableRowDto"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "columns",
+          "rows"
+        ]
+      },
+      "DashboardResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "shared"
+            ]
+          },
+          "schemaVersion": {
+            "type": "number",
+            "description": "Schema version of the stored definition."
+          },
+          "version": {
+            "type": "number",
+            "description": "Optimistic lock. Send this back when writing."
+          },
+          "definition": {
+            "type": "object",
+            "description": "Validated dashboard definition."
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "ownerId",
+          "visibility",
+          "schemaVersion",
+          "version",
+          "definition",
+          "updatedAt"
+        ]
+      },
+      "SaveDashboardDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number"
+          },
+          "definition": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "definition"
+        ]
+      },
+      "PersonalizationResponseDto": {
+        "type": "object",
+        "properties": {
+          "dashboardId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "schemaVersion": {
+            "type": "number"
+          },
+          "version": {
+            "type": "number",
+            "description": "Optimistic lock. Send this back when writing."
+          },
+          "activePresetId": {
+            "type": "string"
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dashboardId",
+          "userId",
+          "schemaVersion",
+          "version",
+          "activePresetId",
+          "presets",
+          "updatedAt"
+        ]
+      },
+      "SavePersonalizationDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "description": "The version last read. A mismatch answers 409."
+          },
+          "activePresetId": {
+            "type": "string"
+          },
+          "presets": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "activePresetId",
+          "presets"
+        ]
+      },
+      "CreatePresetDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Incident review"
+          },
+          "expectedVersion": {
+            "type": "number"
+          },
+          "copyFromPresetId": {
+            "type": "string",
+            "description": "Preset to copy. Defaults to the active one."
+          }
+        },
+        "required": [
+          "name",
+          "expectedVersion"
+        ]
+      },
+      "RenamePresetDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "expectedVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "expectedVersion"
+        ]
+      },
+      "SelectPresetDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "DeletePresetDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "GraphSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "shared"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "description": "Optimistic lock on the structure."
+          },
+          "sequence": {
+            "type": "number",
+            "description": "Highest runtime event sequence. Unrelated to version."
+          },
+          "nodeCount": {
+            "type": "number"
+          },
+          "edgeCount": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "ownerId",
+          "visibility",
+          "version",
+          "sequence",
+          "nodeCount",
+          "edgeCount",
+          "updatedAt"
+        ]
+      },
+      "GraphPositionDto": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
+      },
+      "GraphNodeDto": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "position": {
+            "$ref": "#/components/schemas/GraphPositionDto"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "nodeId",
+          "type",
+          "label",
+          "position",
+          "metadata"
+        ]
+      },
+      "GraphEdgeDto": {
+        "type": "object",
+        "properties": {
+          "edgeId": {
+            "type": "string"
+          },
+          "sourceNodeId": {
+            "type": "string"
+          },
+          "targetNodeId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "edgeId",
+          "sourceNodeId",
+          "targetNodeId",
+          "metadata"
+        ]
+      },
+      "GraphDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "shared"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "description": "Optimistic lock on the structure."
+          },
+          "sequence": {
+            "type": "number",
+            "description": "Highest runtime event sequence. Unrelated to version."
+          },
+          "nodeCount": {
+            "type": "number"
+          },
+          "edgeCount": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphNodeDto"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphEdgeDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "ownerId",
+          "visibility",
+          "version",
+          "sequence",
+          "nodeCount",
+          "edgeCount",
+          "updatedAt",
+          "nodes",
+          "edges"
+        ]
+      },
+      "CreateGraphDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "shared"
+            ],
+            "default": "private"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ]
+      },
+      "ReplaceGraphContentDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "description": "The structure version last read. A mismatch answers 409."
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphNodeDto"
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GraphEdgeDto"
+            }
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "nodes",
+          "edges"
+        ]
+      },
+      "TopologySnapshotDto": {
+        "type": "object",
+        "properties": {
+          "topologyId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number",
+            "description": "The sequence this snapshot reflects. Subscribe from here."
+          },
+          "capturedAt": {
+            "type": "number"
+          },
+          "nodes": {
+            "type": "object"
+          },
+          "edges": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "topologyId",
+          "revision",
+          "capturedAt",
+          "nodes",
+          "edges"
+        ]
+      },
+      "TopologyReplayDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "up-to-date",
+              "replay",
+              "resync"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "decision",
+          "events"
+        ]
+      },
+      "PublishTopologyEventDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "NODE_STATUS_CHANGED",
+              "EDGE_STATUS_CHANGED",
+              "NODE_METRIC_UPDATED",
+              "EDGE_METRIC_UPDATED"
+            ]
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "entityId"
+        ]
+      },
+      "BroadcastDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "live",
+              "ended"
+            ]
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "hls",
+              "progressive"
+            ]
+          },
+          "isLive": {
+            "type": "boolean",
+            "description": "Derived from the stored status, never from the clock."
+          },
+          "dvrEnabled": {
+            "type": "boolean"
+          },
+          "scheduledFor": {
+            "type": "object",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "endedAt": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "sourceType",
+          "isLive",
+          "dvrEnabled"
+        ]
+      },
+      "PlaybackSourceDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hls",
+              "progressive"
+            ]
+          },
+          "src": {
+            "type": "string",
+            "description": "Manifest URL. Treated as a secret and never logged."
+          },
+          "lowLatency": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "src"
+        ]
+      },
+      "PlaybackSessionDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PlaybackSourceDto"
+          },
+          "isLive": {
+            "type": "boolean"
+          },
+          "dvrEnabled": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Short TTL. A leaked URL stops working on its own."
+          }
+        },
+        "required": [
+          "sessionId",
+          "source",
+          "isLive",
+          "dvrEnabled",
+          "expiresAt"
+        ]
+      },
+      "TransitionBroadcastDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "live",
+              "ended"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ChatMessageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "clientMessageId": {
+            "type": "string"
+          },
+          "broadcastId": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "number"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string",
+            "description": "Empty for a deleted message; the row is retained for audit."
+          },
+          "sentAt": {
+            "type": "string",
+            "description": "Server clock. The client timestamp is not trusted or stored."
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "clientMessageId",
+          "broadcastId",
+          "sequence",
+          "authorId",
+          "displayName",
+          "body",
+          "sentAt",
+          "deleted"
+        ]
+      },
+      "ChatHistoryDto": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageDto"
+            }
+          },
+          "nextCursor": {
+            "type": "object",
+            "nullable": true,
+            "description": "Null when the page reached the end."
+          },
+          "latestSequence": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "messages",
+          "latestSequence"
+        ]
+      },
+      "SendChatMessageDto": {
+        "type": "object",
+        "properties": {
+          "clientMessageId": {
+            "type": "string",
+            "description": "Client-generated id. A retry with the same id returns the stored message."
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "clientMessageId",
+          "body"
+        ]
+      },
+      "ModerateMessageDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "MuteUserDto": {
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "number",
+            "description": "Milliseconds. Omit for an indefinite mute."
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetId"
+        ]
+      },
+      "HealthSummaryDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "example": "ok"
+          },
+          "checks": {
+            "type": "object",
+            "description": "One entry per checked dependency."
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 12.5
+          }
+        },
+        "required": [
+          "status",
+          "checks",
+          "uptimeSeconds"
+        ]
+      },
+      "LivenessDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ],
+            "example": "ok"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 12.5,
+            "description": "Seconds since the process started."
+          }
+        },
+        "required": [
+          "status",
+          "uptimeSeconds"
+        ]
+      },
+      "ReadinessDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "example": "ok"
+          },
+          "checks": {
+            "type": "object",
+            "description": "One entry per checked dependency."
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ]
+      },
+      "ApiErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "success",
+          "error"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "VALIDATION_ERROR"
+              },
+              "message": {
+                "type": "string",
+                "example": "Request validation failed."
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Present only when the error carries structured context."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
