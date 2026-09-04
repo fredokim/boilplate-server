@@ -35,6 +35,12 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
+# --ignore-scripts skipped the engines download too, and the CLI would then try
+# to fetch it on first use -- as the non-root `node` user, into a root-owned
+# node_modules, which fails. Bake the binaries in here, while still root, so the
+# migration step needs no network and no write access at deploy time.
+RUN npm rebuild @prisma/engines
+
 # dist carries the compiled server and, via the nest-cli assets entry, the
 # generated Prisma client and its native query engine.
 COPY --from=build /app/dist ./dist

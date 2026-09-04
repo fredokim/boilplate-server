@@ -180,13 +180,19 @@ jobs:
 
       # DEPLOYMENT.md says migrations run as a deployment step, and on a
       # platform that step runs inside this image -- Render's pre-deploy
-      # command, for one. The runtime stage installs with --omit=dev, so a
-      # Prisma CLI left in devDependencies would make the documented
-      # procedure impossible to carry out and nothing would have said so.
-      # No migration is applied here: `migrate status` is expected to fail
-      # to connect, and what is asserted is that the CLI resolves, the
-      # schema travels with the image, and the failure is the connection
-      # rather than a missing command.
+      # command, for one. So the image has to be able to run it, and the
+      # runtime stage installs with --omit=dev --ignore-scripts as a non-root
+      # user: three separate ways the command can be missing or unable to
+      # start, none of which a build failure would reveal.
+      #
+      # No migration is applied. `migrate status` cannot reach the fake
+      # database, and reaching the point of failing to connect is exactly the
+      # proof wanted: the CLI resolved, loaded its engine, read the schema,
+      # and got as far as the network. The assertion is therefore positive --
+      # P1001, the connection error. An earlier version of this step listed
+      # error strings to reject instead, and passed while the real output was
+      # 'Can't write to /app/node_modules/@prisma/engines'. A denylist only
+      # catches the failures someone already thought of.
       - name: The migration step must be runnable in the deployed image
         env:
           IMAGE: boilplate-server:ci
@@ -197,8 +203,11 @@ jobs:
           out=$(docker run --rm -e DATABASE_URL="$FAKE_DB" --entrypoint npx "$IMAGE" prisma migrate status 2>&1 || true)
           echo "$out"
           case "$out" in
-            *"not found"*|*"command not found"*|*"Cannot find module"*|*"npm error"*)
-              echo 'the Prisma CLI is not usable inside the deployed image'
+            *P1001*|*"Can't reach database server"*)
+              echo 'the migration command runs in this image'
+              ;;
+            *)
+              echo 'prisma migrate deploy cannot run in the deployed image'
               exit 1
               ;;
           esac
