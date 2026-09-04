@@ -1,4 +1,11 @@
-# Server
+# boilplate-server
+
+Shared NestJS backend for the React, Vue, and Next.js boilerplates.
+
+It was extracted from `react-boilerplate/server/` with its history, because
+three frontends now share it and it could no longer live inside one of them.
+Each frontend proxies `/api` here — see DEPLOYMENT.md for why that is a
+requirement rather than a convenience.
 
 NestJS + TypeScript + PostgreSQL + Prisma backend for the React boilerplate.
 

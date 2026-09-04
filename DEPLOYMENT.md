@@ -89,24 +89,29 @@ recover.
 
 ---
 
-## The client and the API share an origin
+## The browser must see one origin
 
 This is a constraint, not a preference.
 
 The refresh token is an HttpOnly cookie with `sameSite: 'lax'` and
-`path: '/api/auth'`. Serve the frontend from a different origin than the API and
-the browser stops sending it: sign-in appears to work, and then the session ends
-without explanation the moment the access token expires. The two WebSocket
-gateways (`/api/topology`, `/api/live/chat`) fail the same way; a CDN rewrite in
-front of a separate API host is usually where the upgrade request stops working.
+`path: '/api/auth'`. If a frontend is served from a different origin than this
+API, the browser never sends it: sign-in appears to work, and then the session
+ends without explanation the moment the access token expires. The two WebSocket
+gateways (`/api/topology`, `/api/live/chat`) fail the same way.
 
-So the image carries both. `CLIENT_DIR` points the server at the built frontend;
-when it is empty the process serves the API alone, which is right for a dev
-session, where Vite serves the client and proxies `/api` here -- the same single
-origin reached another way.
+Three frontends share this backend — React, Vue, and Next.js — so it cannot be
+bundled with any one of them. **Each frontend proxies `/api` to this server
+instead.** In development that is the Vite proxy or a Next rewrite; in
+production it is a rewrite rule on whatever host serves the static build. The
+browser sees one origin either way, and this image stays framework-agnostic.
 
-`sameSite: 'none'` would be the alternative. It costs the CSRF protection that
-`lax` gives for free, and it buys nothing if the two ship together.
+`sameSite: 'none'` with CORS would be the alternative and would remove the need
+for a proxy. It costs the CSRF protection `lax` gives for free, which would then
+have to be replaced with a token, so it is not the default here.
+
+`CLIENT_DIR` still exists and still serves a built frontend from this process.
+It is no longer how anything is deployed, but it is the shortest way to
+reproduce the single-origin setup locally without a proxy.
 
 ---
 
@@ -163,6 +168,9 @@ or route every WebSocket for a given graph or broadcast to the same one.
   PostgreSQL from a developer machine, not from a hosting platform. Anything that
   only appears behind a proxy — `TRUST_PROXY`, TLS termination, the platform's own
   idle timeouts on a WebSocket — is untested.
+- **Only the React frontend has ever talked to this server.** Vue and Next.js
+  carry the same three example features, but their realtime transports are still
+  mocks and neither has an API client. Connecting them is separate work.
 
 Two items that used to be on this list are now closed:
 

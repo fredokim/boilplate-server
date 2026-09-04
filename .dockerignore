@@ -1,0 +1,11 @@
+# Keeping the build context small is not only about speed: node_modules copied
+# from a Windows host would carry native binaries an alpine image cannot run.
+node_modules
+dist
+client
+.git
+.github
+coverage
+**/*.log
+.env
+.env.*

@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # postinstall runs `prisma generate`, which needs no database.
+      - run: npm ci
+
+      # Prisma checks come first: a schema that does not validate makes every
+      # later failure a symptom rather than a cause.
+      - run: npx prisma format --check
+      - run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run test:e2e
+      - run: npm run build
+
+      # Fails when the committed openapi.json no longer matches the code. A spec
+      # that silently falls behind is worse than none: it looks authoritative
+      # while describing an API that no longer exists.
+      - run: node dist/tools/checkOpenApiDrift.js
+
+      # Production dependencies only. The remaining dev-tree advisory has no
+      # upstream fix and cannot reach a deployed artefact.
+      - run: npm audit --omit=dev --audit-level=moderate
+
+  # Everything that needs a real PostgreSQL, and nothing that does not.
+  #
+  # The migrations were authored offline with `prisma migrate diff` on a machine
+  # with no database, so until this job runs nothing has ever proved the SQL
+  # applies. It also covers the claims the in-memory fake cannot: a unique
+  # constraint is not enforced by a Map, and "two concurrent writers cannot get
+  # the same sequence" is an argument until a database refuses one.
+
+  integration:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        # Without this the job races the container and the first query fails for
+        # a reason that has nothing to do with the code.
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+      # Prisma creates and drops this to check migrations against a clean
+      # database. It must be separate from the one under test.
+      SHADOW_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_shadow?schema=public
+      JWT_SECRET: ci-secret-value-that-is-long-enough-32
+      # Without these the seed takes its early return after the roles and never
+      # reaches the demo account, broadcast, or graph — so the step below would
+      # report success while leaving most of the seed unexecuted. These are
+      # throwaway credentials for a container that is destroyed with the job.
+      SEED_ADMIN_EMAIL: ci@example.com
+      SEED_ADMIN_PASSWORD: ci-seed-password
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # `migrate deploy`, not `migrate dev`: it applies committed migrations and
+      # never generates or edits one. A deploy step that could author a migration
+      # would be a deploy step that changes the schema nobody reviewed.
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      # Proves every migration is recorded and none is pending — a migration that
+      # applied but did not register would re-run on the next deploy.
+      - name: Check migration status
+        run: npx prisma migrate status
+
+      # `migrate diff --shadow-database-url` expects the database to exist
+      # already — unlike `migrate dev`, it does not create one. The first run of
+      # this job failed with P1003 for exactly that reason.
+      - name: Create the shadow database
+        run: PGPASSWORD=ci psql -h localhost -U ci -d ci -c 'CREATE DATABASE ci_shadow;'
+
+      # The drift that actually matters: does replaying the migrations produce
+      # the schema.prisma everyone is coding against? An empty diff means yes.
+      # A non-empty one means someone edited the schema without a migration, and
+      # the code and the database have quietly disagreed since.
+      - name: Check schema and migrations agree
+        run: |
+          DIFF=$(npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
+            --script)
+          if [ -n "$(echo "$DIFF" | grep -v '^--' | tr -d '[:space:]')" ]; then
+            echo "schema.prisma does not match the committed migrations:"
+            echo "$DIFF"
+            exit 1
+          fi
+          echo "Migrations reproduce schema.prisma exactly."
+
+      # The seed has to work against the real schema, not only compile. It is
+      # also the only thing that exercises the role upsert, the demo graph's
+      # node/edge createMany, and the runtime-state upserts.
+      - name: Run the seed
+        run: npm run prisma:seed
+
+      # Re-running is not redundant: every write in the seed is an upsert or a
+      # delete-then-insert, and "safe to run twice" is a property that only a
+      # second run can demonstrate. A unique constraint tripping here would
+      # otherwise first appear on a developer's machine.
+      - name: Run the seed again
+        run: npm run prisma:seed
+
+      # RUN_INTEGRATION=1 turns skipping off. Without it the suite would skip and
+      # this job would pass while checking nothing.
+      - name: Integration tests against PostgreSQL
+        run: npm run test:integration
+        env:
+          RUN_INTEGRATION: '1'
+
+  # The frontend's assumptions checked against the server's published spec. It
+  # needs both packages installed, which is why it is not part of either job.
+
+  # A build that succeeds proves nothing about whether the entrypoint runs. This
+  # starts the container with no database and asserts that liveness answers
+  # anyway — the documented behaviour, and the property the liveness/readiness
+  # split depends on.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image
+        run: docker build -t boilplate-server:ci .
+      - name: Smoke test the container
+        run: |
+          docker run -d --name smoke -p 3001:3001             -e NODE_ENV=production             -e COOKIE_SECURE=true             -e JWT_SECRET=ci-secret-value-that-is-long-enough-32             -e DATABASE_URL=postgresql://unused:unused@127.0.0.1:5432/unused?schema=public             boilplate-server:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3001/api/health/live > /dev/null; then
+              echo "liveness answered after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3001/api/health/live
+
+          # Readiness must fail without a database — if it passed, the probe is
+          # not checking anything.
+          if curl -fsS http://127.0.0.1:3001/api/health/ready > /dev/null; then
+            echo "readiness passed without a database; the probe is not checking anything"
+            exit 1
+          fi
+          docker logs smoke
+          docker rm -f smoke
