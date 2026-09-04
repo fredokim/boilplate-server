@@ -143,6 +143,44 @@ clear.
 
 ---
 
+## Deploying it
+
+Four services: this one, and one per frontend. `render.yaml` in each repository
+describes its own service, so the blueprints are reviewed with the code rather
+than typed into a dashboard where a changed setting leaves no trace.
+
+**Order matters.** The frontends need this service's URL, and this service needs
+theirs.
+
+1. **This service first.** Create it from `render.yaml`. It will prompt for
+   `DATABASE_URL`, `JWT_SECRET`, and `CORS_ORIGINS` — leave `CORS_ORIGINS` as a
+   placeholder for now; it is filled in at step 4. Generate `JWT_SECRET` fresh;
+   the development one has been on a developer machine and in a shell history.
+2. **Apply the migrations.** The free instance type has no pre-deploy command,
+   so run `npx prisma migrate deploy` against the same `DATABASE_URL` from
+   anywhere that has it. `npx prisma migrate status` should then report none
+   pending. Not from the entrypoint — see above for why.
+3. **The frontends.** Each blueprint prompts for the backend's address:
+   `BACKEND_ORIGIN` for React and Vue, `BACKEND_URL` for Next. Use the URL this
+   service got in step 1.
+4. **Back to `CORS_ORIGINS`.** Set it to the three frontend origins,
+   comma-separated, and redeploy this service. This is not only CORS: the
+   WebSocket handshake is not subject to CORS at all, so this list is what stops
+   a cross-site page from opening an authenticated socket with the browser's
+   cookie. Getting it wrong closes every socket with 4401 — which looks like an
+   authentication bug and is not one.
+
+### What free instances change
+
+Free services spin down after 15 minutes without traffic and take about a minute
+to come back. The first request after a quiet period therefore times out or
+hangs, and any WebSocket open across the spin-down closes. The reconnect and
+resync paths handle that correctly — it is the same case as a dropped
+connection — but a visitor's first click will be slow, and that is a property of
+the plan rather than of the application.
+
+---
+
 ## Scaling limits, stated plainly
 
 Three things are per-process today and will behave incorrectly on more than one
