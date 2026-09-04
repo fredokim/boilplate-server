@@ -179,9 +179,18 @@ export function validateEnvironment(raw: Record<string, unknown>): EnvironmentVa
       })
       .join('\n');
 
+    // Two readers reach this message. Locally it is someone who has not made
+    // a .env yet. In production it is someone reading a deploy log, for whom
+    // advice about a file is worse than useless: the image ships no .env and
+    // never will, and the path this used to name stopped existing when the
+    // server moved out of the monorepo.
+    const remedy =
+      raw.NODE_ENV === 'production'
+        ? "Set these in the platform's environment for this service. See DEPLOYMENT.md."
+        : 'Copy .env.example to .env and fill in the values above.';
+
     throw new Error(
-      `Invalid environment configuration. The server cannot start.\n${problems}\n\n` +
-        'Copy server/.env.example to server/.env and fill in the values above.',
+      `Invalid environment configuration. The server cannot start.\n${problems}\n\n${remedy}`,
     );
   }
 

@@ -95,7 +95,19 @@ describe('validateEnvironment', () => {
     expect(() => validateEnvironment({ ...minimal, NODE_ENV: 'staging' })).toThrow(/NODE_ENV/);
   });
 
-  it('points the reader at .env.example', () => {
-    expect(() => validateEnvironment({})).toThrow(/\.env\.example/);
+  it('points a local reader at .env.example, at the path that exists', () => {
+    // `server/.env.example` was right while this lived in the monorepo, and
+    // outlived that layout by one repository split. A test that only asserted
+    // the filename could not tell.
+    expect(() => validateEnvironment({})).toThrow(/Copy \.env\.example to \.env/);
+    expect(() => validateEnvironment({})).not.toThrow(/server\//);
+  });
+
+  it('does not tell a deployed reader to edit a file the image does not have', () => {
+    // Seen in a real deploy log: the process named the missing variables
+    // correctly and then advised copying a file into a container that ships
+    // none and never will.
+    expect(() => validateEnvironment({ NODE_ENV: 'production' })).toThrow(/platform's environment/);
+    expect(() => validateEnvironment({ NODE_ENV: 'production' })).not.toThrow(/\.env\.example/);
   });
 });
