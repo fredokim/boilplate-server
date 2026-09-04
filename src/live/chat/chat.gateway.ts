@@ -12,6 +12,8 @@ import type { AuthenticatedUser } from '../../auth/types/authenticatedUser';
 import { LOGGER, type LoggerPort } from '../../common/logging/logger.port';
 import { ChatBroadcaster, type ChatEvent } from './chat.broadcaster';
 import { ChatService } from './chat.service';
+import { isTrustedOrigin, readHandshakeCredential } from '../../common/websocket/handshakeAuth';
+import { AppConfig } from '../../config/app.config';
 
 const MAX_ROOMS = 4;
 const MAX_MESSAGES_PER_WINDOW = 60;
@@ -62,6 +64,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chat: ChatService,
     private readonly broadcaster: ChatBroadcaster,
     @Inject(LOGGER) private readonly logger: LoggerPort,
+    private readonly config: AppConfig,
   ) {
     this.broadcaster.onEvent((broadcastId, event) => {
       this.fanOut(broadcastId, event);
@@ -69,8 +72,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleConnection(socket: ChatSocketLike, request: IncomingMessage): Promise<void> {
-    const token = readToken(request);
-    const user = token ? await this.accessTokens.verify(token) : null;
+    const credential = readHandshakeCredential(request);
+
+    // A cookie is only trusted from a page this server allows. See
+    // handshakeAuth.ts: a handshake is not subject to CORS, so without this a
+    // hostile page could open a socket and be authenticated as the signed-in
+    // user.
+    const trusted =
+      credential === null || !credential.fromCookie || isTrustedOrigin(request, this.config.corsOrigins);
+
+    const user = credential !== null && trusted ? await this.accessTokens.verify(credential.token) : null;
 
     if (!user) {
       socket.close(CHAT_CLOSE.unauthenticated, 'unauthenticated');
@@ -233,12 +244,6 @@ function send(socket: ChatSocketLike, message: Record<string, unknown>): void {
 }
 
 /** Same handshake trade as the topology gateway — see the note there. */
-function readToken(request: IncomingMessage): string | null {
-  const url = new URL(request.url ?? '/', 'http://localhost');
-  const token = url.searchParams.get('token');
-
-  return token && token.length > 0 ? token : null;
-}
 
 function parseJoin(payload: unknown): { broadcastId: string; afterSequence?: number } | null {
   if (typeof payload !== 'object' || payload === null) return null;

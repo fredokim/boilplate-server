@@ -13,6 +13,8 @@ import type { AuthenticatedUser } from '../../auth/types/authenticatedUser';
 import { GraphService } from '../graph.service';
 import { TopologyBroadcaster } from './topology.broadcaster';
 import { TopologyService } from './topology.service';
+import { isTrustedOrigin, readHandshakeCredential } from '../../common/websocket/handshakeAuth';
+import { AppConfig } from '../../config/app.config';
 
 /**
  * Limits, all per connection. Without them one client can hold an unbounded
@@ -76,6 +78,7 @@ export class TopologyGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly topology: TopologyService,
     private readonly broadcaster: TopologyBroadcaster,
     @Inject(LOGGER) private readonly logger: LoggerPort,
+    private readonly config: AppConfig,
   ) {
     this.broadcaster.onEvent((graphId, event) => {
       this.fanOut(graphId, { type: 'event', event });
@@ -83,8 +86,16 @@ export class TopologyGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   async handleConnection(socket: SocketLike, request: IncomingMessage): Promise<void> {
-    const token = readToken(request);
-    const user = token ? await this.accessTokens.verify(token) : null;
+    const credential = readHandshakeCredential(request);
+
+    // A cookie is only trusted from a page this server allows. See
+    // handshakeAuth.ts: a handshake is not subject to CORS, so without this a
+    // hostile page could open a socket and be authenticated as the signed-in
+    // user.
+    const trusted =
+      credential === null || !credential.fromCookie || isTrustedOrigin(request, this.config.corsOrigins);
+
+    const user = credential !== null && trusted ? await this.accessTokens.verify(credential.token) : null;
 
     if (!user) {
       // No detail about why. A client that cannot authenticate learns only that.
@@ -289,12 +300,6 @@ function send(socket: SocketLike, message: Record<string, unknown>): void {
  * logs — which is why it is the short-lived access token and never the refresh
  * token, and why the request path is logged without its query string elsewhere.
  */
-function readToken(request: IncomingMessage): string | null {
-  const url = new URL(request.url ?? '/', 'http://localhost');
-  const token = url.searchParams.get('token');
-
-  return token && token.length > 0 ? token : null;
-}
 
 function parseSubscribe(payload: unknown): { graphId: string; lastSequence?: number } | null {
   if (typeof payload !== 'object' || payload === null) return null;

@@ -47,7 +47,12 @@ class FakeSocket implements SocketLike {
 }
 
 function request(token?: string): IncomingMessage {
-  return { url: token ? `/api/topology?token=${token}` : '/api/topology' } as IncomingMessage;
+  // `headers` is present on every real IncomingMessage, and the handshake now
+  // reads it — a fake without one crashes rather than failing the assertion.
+  return {
+    url: token ? `/api/topology?token=${token}` : '/api/topology',
+    headers: {},
+  } as unknown as IncomingMessage;
 }
 
 function createGateway(overrides: {
@@ -67,6 +72,8 @@ function createGateway(overrides: {
     topology as unknown as TopologyService,
     broadcaster,
     logger,
+    // Only corsOrigins is read, and only for cookie-authenticated handshakes.
+    { corsOrigins: ['http://localhost:5173'] } as AppConfig,
   );
 
   return { gateway, graphs, topology, broadcaster, logger };
