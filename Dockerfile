@@ -28,8 +28,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Production dependencies only. The build toolchain, the test runner, and the
-# Prisma CLI stay behind in the build stage.
+# Production dependencies only. The build toolchain and the test runner stay
+# behind in the build stage. The Prisma CLI does not: `prisma migrate deploy`
+# is a deployment step that runs in this image, so shipping without it would
+# make the documented migration procedure impossible to carry out.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 

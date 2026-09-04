@@ -117,20 +117,25 @@ reproduce the single-origin setup locally without a proxy.
 
 ## Image
 
-Built from the repository root, not from `server/`: the frontend build is one of
-its stages.
+The API only. The client stage came out when the three frontends moved to
+proxying `/api` here.
 
 ```bash
-docker build -t react-boilerplate .
+docker build -t boilplate-server .
 docker run --rm -p 3001:3001 \
   -e DATABASE_URL=... -e JWT_SECRET=... -e COOKIE_SECURE=true -e NODE_ENV=production \
-  react-boilerplate
+  boilplate-server
 ```
 
-Multi-stage: the TypeScript toolchain, the test runner, and the Prisma CLI stay in
-the build stages. Runs as the image's non-root `node` user. The healthcheck hits
-liveness only, so a container that is up but waiting on the database reports
-healthy-but-not-ready — which is what a rolling deploy needs to see.
+Multi-stage: the TypeScript toolchain and the test runner stay in the build
+stage. The Prisma CLI does not -- `prisma migrate deploy` is a deployment step
+that runs in this image, and shipping without it would make the procedure above
+impossible to carry out. CI asserts the command resolves inside the built image,
+because a comment saying so is not a check.
+
+Runs as the image's non-root `node` user. The healthcheck hits liveness only, so
+a container that is up but waiting on the database reports healthy-but-not-ready
+-- which is what a rolling deploy needs to see.
 
 `NODE_ENV=production` refuses to start when `COOKIE_SECURE` is false, so a
 plain-HTTP deployment fails at boot instead of sending the refresh cookie in the
@@ -159,21 +164,22 @@ or route every WebSocket for a given graph or broadcast to the same one.
 
 - **The Docker image has never been built locally.** There is no Docker daemon on
   this machine. CI's `docker` job builds it and smoke-tests the container: liveness
-  answers without a database, readiness does not, the client is served, a deep link
-  reaches the SPA, and an unknown API path still returns 404 rather than HTML.
+  answers without a database, readiness does not, and the Prisma CLI the migration
+  step needs resolves inside the image.
 - **No load testing has been done.** No baseline numbers are claimed. The bounded
   queues, coalescing, and slow-consumer disconnect are argued for in code and
   covered by unit tests; none of that is a measurement.
 - **Nothing has been deployed.** The application has run against a hosted
   PostgreSQL from a developer machine, not from a hosting platform. Anything that
   only appears behind a proxy — `TRUST_PROXY`, TLS termination, the platform's own
-  idle timeouts on a WebSocket — is untested.
-- **Only the React frontend has ever talked to this server.** Vue and Next.js
-  carry the same three example features, but their realtime transports are still
-  mocks and neither has an API client. Connecting them is separate work.
+  idle timeouts on a WebSocket — is untested. `render.yaml` describes the
+  service; describing it is not running it.
 
-Two items that used to be on this list are now closed:
+Three items that used to be on this list are now closed:
 
+- All three frontends have talked to this server over a real socket, signed in
+  against it, and driven the same chat and topology features from it. Each one
+  proxies `/api`, so the browser sees a single origin.
 - Migrations were authored offline, and have since been applied from this machine
   against a hosted PostgreSQL with `migrate deploy`; `migrate status` reports none
   pending, and CI's `integration` job proves replaying them reproduces

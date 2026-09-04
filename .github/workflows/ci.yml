@@ -177,3 +177,28 @@ jobs:
           fi
           docker logs smoke
           docker rm -f smoke
+
+      # DEPLOYMENT.md says migrations run as a deployment step, and on a
+      # platform that step runs inside this image -- Render's pre-deploy
+      # command, for one. The runtime stage installs with --omit=dev, so a
+      # Prisma CLI left in devDependencies would make the documented
+      # procedure impossible to carry out and nothing would have said so.
+      # No migration is applied here: `migrate status` is expected to fail
+      # to connect, and what is asserted is that the CLI resolves, the
+      # schema travels with the image, and the failure is the connection
+      # rather than a missing command.
+      - name: The migration step must be runnable in the deployed image
+        env:
+          IMAGE: boilplate-server:ci
+          FAKE_DB: postgresql://unused:unused@127.0.0.1:5432/unused?schema=public
+        run: |
+          docker run --rm --entrypoint node "$IMAGE" -e "console.log(require.resolve('prisma/package.json'))"
+          docker run --rm --entrypoint node "$IMAGE" -e "require('fs').accessSync('prisma/schema.prisma')"
+          out=$(docker run --rm -e DATABASE_URL="$FAKE_DB" --entrypoint npx "$IMAGE" prisma migrate status 2>&1 || true)
+          echo "$out"
+          case "$out" in
+            *"not found"*|*"command not found"*|*"Cannot find module"*|*"npm error"*)
+              echo 'the Prisma CLI is not usable inside the deployed image'
+              exit 1
+              ;;
+          esac

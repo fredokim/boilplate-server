@@ -1,0 +1,71 @@
+# Render blueprint.
+#
+# This describes the service in the repository rather than in a dashboard,
+# where a setting that drifts leaves no trace of having drifted. Secrets are
+# not here: `sync: false` makes Render prompt for them once and store them.
+#
+# See DEPLOYMENT.md for what each setting is protecting against.
+
+services:
+  - type: web
+    name: boilplate-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+
+    # Liveness, never readiness. A database outage must not make the platform
+    # recycle every instance -- that removes the capacity needed to recover
+    # and fixes nothing. DEPLOYMENT.md, "Health contract".
+    healthCheckPath: /api/health/live
+
+    # No preDeployCommand. Render offers it only on paid instance types, so on
+    # the free plan `npx prisma migrate deploy` is run as a release step from a
+    # machine holding DATABASE_URL, against the same hosted database. The image
+    # ships the Prisma CLI and the migrations either way, so moving to a paid
+    # plan is one line:
+    #
+    #   preDeployCommand: npx prisma migrate deploy
+    #
+    # What must not happen is migrating from the entrypoint: a rolling deploy
+    # would start several containers racing the same migration.
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+
+      # The refresh cookie is HttpOnly and sameSite lax. Without secure it
+      # would travel in clear text, and the server refuses to start in
+      # production when this is false rather than doing so quietly.
+      - key: COOKIE_SECURE
+        value: "true"
+
+      # Render terminates TLS at its own proxy. Without this, every request log
+      # and every session records the proxy's address instead of the client's.
+      - key: TRUST_PROXY
+        value: "true"
+
+      # The interactive API docs are a description of every endpoint and its
+      # payloads. That is useful in development and is reconnaissance in
+      # production.
+      - key: SWAGGER_ENABLED
+        value: "false"
+
+      # Each frontend proxies /api to this service, so the browser sees one
+      # origin and the lax cookie is actually sent. This list is also what the
+      # WebSocket handshake checks: the handshake is not subject to CORS, so a
+      # cookie-authenticated socket has to refuse a cross-site connection on
+      # its own. Set it to the deployed frontend origins, comma-separated.
+      - key: CORS_ORIGINS
+        sync: false
+
+      # Prompted once at blueprint creation, then stored by Render.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+      # SEED_ADMIN_PASSWORD is deliberately absent. It creates a demo account,
+      # and the server refuses to start in production if it is set.
