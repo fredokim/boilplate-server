@@ -3,6 +3,8 @@
 No platform is assumed. What the server needs is a process manager that can send
 SIGTERM, a PostgreSQL it can reach, and the environment variables below.
 
+> A Korean translation of this document is at [DEPLOYMENT.ko.md](DEPLOYMENT.ko.md).
+
 ---
 
 ## Environment
