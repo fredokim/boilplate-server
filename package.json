@@ -1,5 +1,5 @@
 {
-  "name": "react-boilerplate-server",
+  "name": "boilplate-server",
   "version": "0.1.0",
   "private": true,
   "description": "NestJS backend foundation for the React boilerplate.",
@@ -22,8 +22,9 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "postinstall": "prisma generate",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run test:e2e && npm run build && node dist/tools/checkOpenApiDrift.js",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run test:e2e && npm run build && node dist/tools/checkOpenApiDrift.js && node dist/tools/checkDocs.js",
     "openapi:check": "npm run build && node dist/tools/checkOpenApiDrift.js",
+    "docs:check": "npm run build && node dist/tools/checkDocs.js",
     "test:integration": "jest --config ./test/jest-integration.json"
   },
   "dependencies": {
