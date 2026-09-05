@@ -216,3 +216,71 @@ jobs:
               exit 1
               ;;
           esac
+
+  # Does this pull request's contract still work for the three frontends?
+  #
+  # Deliberately not `needs: server`. It is a fast gate — install, generate the
+  # spec, run one vitest directory per client — and making it wait for e2e and
+  # the Docker build would turn a three-minute answer into a fifteen-minute one.
+  #
+  # Each client's own CI keeps running its own full suite. What this adds is the
+  # question only the server can ask: does the spec this branch produces still
+  # satisfy what they validate? No dispatch, no callbacks, no tokens — the
+  # repositories are public, so checking one out is a step, not an integration.
+  contract-compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      # One client breaking must not hide another. Without this the first
+      # failure cancels the rest and the log says nothing about the other two.
+      fail-fast: false
+      matrix:
+        client:
+          - name: React
+            repository: fredokim/boilplate-react
+          - name: Next
+            repository: fredokim/boilplate-next
+          - name: Vue
+            repository: fredokim/boilplate-vue
+    name: contract (${{ matrix.client.name }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node dist/tools/generateOpenApi.js
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.client.repository }}
+          path: client
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+
+      # Printed before the check runs, so the log reads as cause then effect
+      # rather than a failure followed by a hunt for what caused it.
+      - name: What this branch changes for ${{ matrix.client.name }}
+        run: node dist/tools/compareSpecs.js client/contracts/openapi.json openapi.json
+
+      # The contract tests read `contracts/openapi.json`. Replacing it is what
+      # asks "would this client still work against the server this branch
+      # describes?" rather than "does it work against the spec it shipped with?"
+      - run: cp ../openapi.json contracts/openapi.json
+        working-directory: client
+
+      - run: npm run check:contract
+        working-directory: client
+
+      - if: failure()
+        run: |
+          echo "::error::${{ matrix.client.name }} cannot read the API this branch describes."
+          echo "The contract change is listed above, under 'What this branch changes'."
+          echo "Either the change is not additive, or ${{ matrix.client.repository }} needs updating first."

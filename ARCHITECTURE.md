@@ -1,11 +1,13 @@
 # Server Architecture
 
-NestJS backend for the React boilerplate. This document covers how a request is
-handled, where each responsibility lives, and what was deliberately left out of
-each step.
+NestJS backend shared by the React, Next and Vue boilerplates. This document
+covers how a request is handled, where each responsibility lives, and what was
+deliberately left out of each step.
 
-The frontend is unchanged by this work. MSW still serves the app, and no client
-code points at this server yet.
+All three frontends run against this server in production. Each still ships MSW
+and can run entirely on mocks — that is what their data-mode switch decides — but
+"no client code points at this server" stopped being true some time ago, and this
+paragraph said otherwise until an audit read it.
 
 ---
 
@@ -300,6 +302,38 @@ Tests use Jest rather than the frontend's Vitest. Nest's testing utilities,
 packages are independent, so the toolchains do not have to match.
 
 ---
+
+## Contract compatibility
+
+This repository owns the HTTP contract, so it is the one that can ask whether a
+change to it still works for the three frontends. `contract-compatibility` in
+CI asks that, once per client, on every pull request.
+
+It generates the spec this branch produces, checks out the client, replaces the
+client's committed `contracts/openapi.json` with the candidate, and runs only
+that client's contract tests. Those tests compare every DTO the client validates
+a response with against the schema published for it.
+
+Three decisions worth keeping:
+
+- **It does not wait for the rest of CI.** Install, generate, one vitest
+  directory per client. Making it `needs: server` would turn a three-minute
+  answer into a fifteen-minute one, and a slow gate is one people learn to merge
+  around.
+- **It never compares bytes.** An additive change — a new endpoint, a new schema
+  — makes the client's committed file differ while breaking nothing. Failing on
+  that would train everyone to ignore the check. Conformance is the gate;
+  staleness is not.
+- **`fail-fast: false`.** One client breaking must not cancel the other two and
+  leave the log silent about them.
+
+`compareSpecs.js` prints what the branch changes — endpoints removed, fields
+dropped, fields that stopped being guaranteed — before the check runs, so the
+log reads as cause and then effect. A three-thousand-line document is not
+something anyone will diff by hand at the bottom of a CI log.
+
+The clients keep their own full pipelines. What this adds is only the question
+they cannot ask themselves.
 
 ## Auth
 
