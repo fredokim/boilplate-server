@@ -36,6 +36,11 @@ jobs:
       # while describing an API that no longer exists.
       - run: node dist/tools/checkOpenApiDrift.js
 
+      # Fails when a document names an npm script or a repository path that does
+      # not exist. The README described a server directory that had moved to its
+      # own repository for weeks, and nothing noticed.
+      - run: node dist/tools/checkDocs.js
+
       # Production dependencies only. The remaining dev-tree advisory has no
       # upstream fix and cannot reach a deployed artefact.
       - run: npm audit --omit=dev --audit-level=moderate

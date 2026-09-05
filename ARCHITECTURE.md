@@ -72,9 +72,12 @@ HTTP status tells an intermediary what to do. `error.code` tells the frontend
 what happened. Several codes can share a status, and a code keeps its meaning
 even if the status changes.
 
-`AUTH_REQUIRED` is load-bearing: `src/core/api/apiClient.ts` on the frontend
-branches on that exact string to classify a failure as `kind: 'auth'`. Renaming
-it here breaks that branch silently.
+`AUTH_REQUIRED` is load-bearing in all three frontends, each of which branches on
+that exact string to classify a failure as an authentication problem rather than
+an unknown one — React in `apiClient.ts`, Next in `clientApiClient.ts`, Vue in
+`failureStatus.ts`, by way of the error code its HTTP client lifts out of the
+envelope. Renaming it here breaks three branches silently, and none of them
+would fail to compile.
 
 ### `details` and the frontend DTO
 
@@ -123,7 +126,7 @@ objects use dots, array elements use brackets — `nodes[0].id`.
 
 ## Configuration
 
-`config/env.validation.ts` validates the environment while `AppConfigModule` is
+`src/config/env.validation.ts` validates the environment while `AppConfigModule` is
 being imported, before anything listens. A missing or malformed variable stops
 the process with every offending variable named at once.
 
