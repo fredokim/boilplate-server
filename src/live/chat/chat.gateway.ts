@@ -11,6 +11,8 @@ import { AccessTokenService } from '../../auth/tokens/accessToken.service';
 import type { AuthenticatedUser } from '../../auth/types/authenticatedUser';
 import { LOGGER, type LoggerPort } from '../../common/logging/logger.port';
 import { ChatBroadcaster, type ChatEvent } from './chat.broadcaster';
+import type { ChatServerFrame } from './chatProtocol';
+import { REALTIME_CLOSE } from '../../realtime/closeCodes';
 import { ChatService } from './chat.service';
 import { isTrustedOrigin, readHandshakeCredential } from '../../common/websocket/handshakeAuth';
 import { AppConfig } from '../../config/app.config';
@@ -21,10 +23,14 @@ const RATE_WINDOW_MS = 10_000;
 const MAX_BUFFERED_BYTES = 512 * 1024;
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
+/**
+ * Kept as a named alias so existing call sites and tests read the same, while
+ * the numbers now come from the table both gateways share.
+ */
 export const CHAT_CLOSE = {
-  unauthenticated: 4401,
-  rateLimited: 4429,
-  slowConsumer: 4408,
+  unauthenticated: REALTIME_CLOSE.unauthenticated,
+  rateLimited: REALTIME_CLOSE.rateLimited,
+  slowConsumer: REALTIME_CLOSE.slowConsumer,
 } as const;
 
 export interface ChatSocketLike {
@@ -188,7 +194,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /** Same slow-consumer policy as the topology gateway, and for the same reason. */
   private fanOut(broadcastId: string, event: ChatEvent): void {
-    const message = event.kind === 'message' ? { type: 'message', message: event.message } : { type: 'deleted', ...event };
+    const message: ChatServerFrame =
+      event.kind === 'message' ? { type: 'message', message: event.message } : { type: 'deleted', ...event };
 
     for (const connection of this.connections.values()) {
       if (!connection.rooms.has(broadcastId)) continue;
@@ -235,7 +242,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 }
 
-function send(socket: ChatSocketLike, message: Record<string, unknown>): void {
+function send(socket: ChatSocketLike, message: ChatServerFrame): void {
   try {
     socket.send(JSON.stringify(message));
   } catch {

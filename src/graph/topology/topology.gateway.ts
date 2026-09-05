@@ -13,6 +13,8 @@ import type { AuthenticatedUser } from '../../auth/types/authenticatedUser';
 import { GraphService } from '../graph.service';
 import { TopologyBroadcaster } from './topology.broadcaster';
 import { TopologyService } from './topology.service';
+import type { TopologyServerFrame } from './topologyProtocol';
+import { REALTIME_CLOSE } from '../../realtime/closeCodes';
 import { isTrustedOrigin, readHandshakeCredential } from '../../common/websocket/handshakeAuth';
 import { AppConfig } from '../../config/app.config';
 
@@ -30,12 +32,16 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
  * Close codes. 4000+ is the application range; a client can branch on these to
  * decide whether reconnecting is worth trying.
  */
+/**
+ * Kept as a named alias so existing call sites and tests read the same, while
+ * the numbers now come from the table both gateways share.
+ */
 export const CLOSE = {
-  unauthenticated: 4401,
-  forbidden: 4403,
-  rateLimited: 4429,
-  slowConsumer: 4408,
-  protocol: 4400,
+  unauthenticated: REALTIME_CLOSE.unauthenticated,
+  forbidden: REALTIME_CLOSE.forbidden,
+  rateLimited: REALTIME_CLOSE.rateLimited,
+  slowConsumer: REALTIME_CLOSE.slowConsumer,
+  protocol: REALTIME_CLOSE.protocol,
 } as const;
 
 /** The minimum a socket has to look like, so tests need no real WebSocket. */
@@ -231,7 +237,7 @@ export class TopologyGateway implements OnGatewayConnection, OnGatewayDisconnect
    * disconnecting is recoverable, because the client reconnects with its last
    * sequence and replays.
    */
-  private fanOut(graphId: string, message: Record<string, unknown>): void {
+  private fanOut(graphId: string, message: TopologyServerFrame): void {
     for (const connection of this.connections.values()) {
       if (!connection.subscriptions.has(graphId)) continue;
 
@@ -283,7 +289,7 @@ export class TopologyGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 }
 
-function send(socket: SocketLike, message: Record<string, unknown>): void {
+function send(socket: SocketLike, message: TopologyServerFrame): void {
   try {
     socket.send(JSON.stringify(message));
   } catch {
