@@ -11,8 +11,8 @@ import { AccessTokenService } from '../../auth/tokens/accessToken.service';
 import type { AuthenticatedUser } from '../../auth/types/authenticatedUser';
 import { LOGGER, type LoggerPort } from '../../common/logging/logger.port';
 import { ChatBroadcaster, type ChatEvent } from './chat.broadcaster';
-import type { ChatServerFrame } from './chatProtocol';
-import { REALTIME_CLOSE } from '../../realtime/closeCodes';
+import type { ChatClientPayload, ChatServerFrame } from './chatProtocol';
+import { REALTIME_CLOSE, type RealtimeCloseCode } from '../../realtime/closeCodes';
 import { ChatService } from './chat.service';
 import { isTrustedOrigin, readHandshakeCredential } from '../../common/websocket/handshakeAuth';
 import { AppConfig } from '../../config/app.config';
@@ -35,7 +35,12 @@ export const CHAT_CLOSE = {
 
 export interface ChatSocketLike {
   send(data: string): void;
-  close(code?: number, reason?: string): void;
+  /**
+   * `RealtimeCloseCode`, not `number`. A close code invented at a call site is
+   * one a client has no table for, and the table is the whole point of
+   * `closeCodes.ts`.
+   */
+  close(code?: RealtimeCloseCode, reason?: string): void;
   readonly bufferedAmount?: number;
 }
 
@@ -252,7 +257,7 @@ function send(socket: ChatSocketLike, message: ChatServerFrame): void {
 
 /** Same handshake trade as the topology gateway — see the note there. */
 
-function parseJoin(payload: unknown): { broadcastId: string; afterSequence?: number } | null {
+function parseJoin(payload: unknown): ChatClientPayload<'join'> | null {
   if (typeof payload !== 'object' || payload === null) return null;
 
   const { broadcastId, afterSequence } = payload as { broadcastId?: unknown; afterSequence?: unknown };

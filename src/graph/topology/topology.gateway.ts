@@ -13,8 +13,8 @@ import type { AuthenticatedUser } from '../../auth/types/authenticatedUser';
 import { GraphService } from '../graph.service';
 import { TopologyBroadcaster } from './topology.broadcaster';
 import { TopologyService } from './topology.service';
-import type { TopologyServerFrame } from './topologyProtocol';
-import { REALTIME_CLOSE } from '../../realtime/closeCodes';
+import type { TopologyClientPayload, TopologyServerFrame } from './topologyProtocol';
+import { REALTIME_CLOSE, type RealtimeCloseCode } from '../../realtime/closeCodes';
 import { isTrustedOrigin, readHandshakeCredential } from '../../common/websocket/handshakeAuth';
 import { AppConfig } from '../../config/app.config';
 
@@ -47,7 +47,12 @@ export const CLOSE = {
 /** The minimum a socket has to look like, so tests need no real WebSocket. */
 export interface SocketLike {
   send(data: string): void;
-  close(code?: number, reason?: string): void;
+  /**
+   * `RealtimeCloseCode`, not `number`. A close code invented at a call site is
+   * one a client has no table for, and the table is the whole point of
+   * `closeCodes.ts`.
+   */
+  close(code?: RealtimeCloseCode, reason?: string): void;
   readonly bufferedAmount?: number;
 }
 
@@ -307,7 +312,7 @@ function send(socket: SocketLike, message: TopologyServerFrame): void {
  * token, and why the request path is logged without its query string elsewhere.
  */
 
-function parseSubscribe(payload: unknown): { graphId: string; lastSequence?: number } | null {
+function parseSubscribe(payload: unknown): TopologyClientPayload<'subscribe'> | null {
   if (typeof payload !== 'object' || payload === null) return null;
 
   const { graphId, lastSequence } = payload as { graphId?: unknown; lastSequence?: unknown };

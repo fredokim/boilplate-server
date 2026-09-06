@@ -57,4 +57,19 @@ export type ChatClientFrame =
   | { event: 'leave'; data: { broadcastId: string } }
   | { event: 'ping'; data?: undefined };
 
-export type ChatServerFrameType = ChatServerFrame['type'];
+/**
+ * The payload one client frame carries, named by its event.
+ *
+ * This exists so `ChatClientFrame` is load-bearing rather than decorative. It
+ * was neither for a while: the union was declared here and the gateway's
+ * `parseJoin` wrote its own return type by hand, so the two could disagree and
+ * nothing would say so — a declaration that looks like a contract and enforces
+ * nothing, which is the shape of defect this repository keeps finding.
+ *
+ * Deriving the parser's return type from the union means renaming a field here
+ * fails the build at the handler that uses it.
+ */
+export type ChatClientPayload<TEvent extends ChatClientFrame['event']> = Extract<
+  ChatClientFrame,
+  { event: TEvent }
+>['data'];
