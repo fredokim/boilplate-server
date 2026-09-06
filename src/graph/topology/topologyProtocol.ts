@@ -59,3 +59,16 @@ export type TopologyClientFrame =
   | { event: 'ping'; data?: undefined };
 
 export type TopologyServerFrameType = TopologyServerFrame['type'];
+
+/**
+ * The payload one client frame carries, named by its event.
+ *
+ * Deriving the parser's return type from the union is what makes
+ * `TopologyClientFrame` load-bearing: renaming a field here fails the build at
+ * the handler that uses it. Before this, the union was declared and the
+ * gateway's `parseSubscribe` wrote its own return type by hand.
+ */
+export type TopologyClientPayload<TEvent extends TopologyClientFrame['event']> = Extract<
+  TopologyClientFrame,
+  { event: TEvent }
+>['data'];

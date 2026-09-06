@@ -7,6 +7,7 @@ import { TopologyBroadcaster } from './topology.broadcaster';
 import { CLOSE, type SocketLike, TopologyGateway } from './topology.gateway';
 import type { TopologyService } from './topology.service';
 import type { TopologyRealtimeEvent } from './topologyEvent';
+import type { TopologyServerFrameType } from './topologyProtocol';
 
 /**
  * The gateway is tested against a fake socket rather than a real WebSocket.
@@ -41,7 +42,12 @@ class FakeSocket implements SocketLike {
     this.closed = { code, reason };
   }
 
-  messagesOfType(type: string): Record<string, unknown>[] {
+  /**
+   * `TopologyServerFrameType`, not `string`. Asking for a frame the gateway
+   * never sends is a test that passes by finding nothing, which is the most
+   * expensive kind to debug.
+   */
+  messagesOfType(type: TopologyServerFrameType): Record<string, unknown>[] {
     return this.sent.filter((message) => message.type === type);
   }
 }
