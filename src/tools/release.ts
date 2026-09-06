@@ -97,6 +97,11 @@ const GATES: readonly Gate[] = [
     proves: 'every variable the server reads is documented in .env.example',
     ...npm('check:env'),
   },
+  {
+    name: 'protocol-exports',
+    proves: 'every declaration in a protocol file is spoken by something',
+    ...npm('check:protocol'),
+  },
   { name: 'lint', proves: 'the code passes the lint rules with no warnings', ...npm('lint') },
   { name: 'typecheck', proves: 'the types are sound', ...npm('typecheck') },
   { name: 'unit', proves: 'the unit tests pass', ...npm('test') },

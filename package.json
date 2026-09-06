@@ -27,7 +27,8 @@
     "docs:check": "npm run build && node dist/tools/checkDocs.js",
     "test:integration": "jest --config ./test/jest-integration.json",
     "check:env": "npm run build && node dist/tools/checkEnvExample.js",
-    "release": "npm run build && node dist/tools/release.js"
+    "release": "npm run build && node dist/tools/release.js",
+    "check:protocol": "npm run build && node dist/tools/checkProtocolExports.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
