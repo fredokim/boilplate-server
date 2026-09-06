@@ -209,13 +209,20 @@ or route every WebSocket for a given graph or broadcast to the same one.
 - **No load testing has been done.** No baseline numbers are claimed. The bounded
   queues, coalescing, and slow-consumer disconnect are argued for in code and
   covered by unit tests; none of that is a measurement.
-- **Nothing has been deployed.** The application has run against a hosted
-  PostgreSQL from a developer machine, not from a hosting platform. Anything that
-  only appears behind a proxy — `TRUST_PROXY`, TLS termination, the platform's own
-  idle timeouts on a WebSocket — is untested. `render.yaml` describes the
-  service; describing it is not running it.
+- **The deployed service is suspended between demonstrations.** It runs on
+  Render's free tier, where an instance that stays up spends the monthly 750
+  hours in about eight days, so it is switched off when nobody is looking at it.
+  A cold start takes around twenty seconds, and a burst of parallel requests into
+  a sleeping instance is answered `429` with `x-render-routing:
+  hibernate-rate-limited` rather than waking it — which is why each frontend
+  wakes it with one patient request rather than several impatient ones.
 
-Three items that used to be on this list are now closed:
+Four items that used to be on this list are now closed:
+
+- **It has been deployed.** `render.yaml` describes four services and all four
+  have run from it. What that closed in particular is everything only visible
+  behind a platform proxy — `TRUST_PROXY`, TLS termination, and the idle timeout
+  on a WebSocket.
 
 - All three frontends have talked to this server over a real socket, signed in
   against it, and driven the same chat and topology features from it. Each one
