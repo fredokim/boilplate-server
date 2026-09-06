@@ -391,13 +391,21 @@ model ChatMessage {
   /// broadcast, which is what makes the retry idempotent rather than duplicating.
   clientMessageId String
 
-  /// Monotonic per broadcast. Allocated in the same transaction as the insert.
+  /// The room's order, and the only one. Monotonic per broadcast, allocated in
+  /// the same transaction as the insert, so two senders cannot share a number.
+  /// A reconnect resumes from it; a client that orders on anything else is
+  /// ordering on something the server does not promise.
   sequence Int
 
   body String
 
-  /// Server clock. The client's timestamp is not trusted and not stored — it is
-  /// trivially wrong and trivially forged, and ordering depends on this.
+  /// Server clock, for display. The client's timestamp is not trusted and not
+  /// stored — it is trivially wrong and trivially forged.
+  ///
+  /// Not an order. `now()` is transaction start time, while `sequence` is handed
+  /// out when the increment above takes the broadcast row's lock, so two
+  /// concurrent sends can receive their sequences in one order and their
+  /// timestamps in the other. Order on `sequence`.
   sentAt DateTime @default(now())
 
   /// Moderation is a separate column from the body, so a removed message can
