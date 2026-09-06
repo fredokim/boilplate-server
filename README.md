@@ -4,7 +4,7 @@ Shared NestJS backend for the React, Vue, and Next.js boilerplates.
 
 It was extracted from `react-boilerplate/server/` with its history, because
 three frontends now share it and it could no longer live inside one of them.
-Each frontend proxies `/api` here — see DEPLOYMENT.md for why that is a
+Each frontend proxies `/api` here — see [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for why that is a
 requirement rather than a convenience.
 
 NestJS + TypeScript + PostgreSQL + Prisma backend for the React boilerplate.
@@ -12,7 +12,7 @@ NestJS + TypeScript + PostgreSQL + Prisma backend for the React boilerplate.
 The foundation — configuration, the shared API envelope, validation, error
 handling, logging, health probes, OpenAPI — plus the auth, dashboard, graph, and
 live/chat modules. See
-[ARCHITECTURE.md](./ARCHITECTURE.md) for where they go.
+[ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for where they go.
 
 **The frontend is untouched.** MSW still serves the app and no client code points
 at this server.
@@ -38,7 +38,7 @@ The API is at `http://localhost:3001/api` and the docs at
 
 You do **not** need the database running to start the server. It boots without
 one, liveness passes, and readiness reports the failure. That is deliberate; see
-ARCHITECTURE.md.
+[ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 
 ---
 
@@ -92,7 +92,7 @@ empty skips it — no password is ever invented. Startup refuses
 `SEED_ADMIN_PASSWORD` in production, and refuses `COOKIE_SECURE=false` there too.
 
 Every route is protected by default; opening one is `@Public()`. See
-[ARCHITECTURE.md](./ARCHITECTURE.md) for token design, rotation, and the reasoning
+[ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for token design, rotation, and the reasoning
 behind the login behaviour.
 
 ## Dashboard
