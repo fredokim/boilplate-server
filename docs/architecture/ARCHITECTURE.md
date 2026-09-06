@@ -411,6 +411,36 @@ returns `AUTH_FORBIDDEN` with `details.missingPermissions`, which tells an
 authenticated caller what to ask an administrator for and discloses nothing they
 could not learn by trying.
 
+### What every route requires
+
+Extracted from the controllers, class-level decorators included. It lives here
+rather than in the frontends' documents because it is this server's policy, and
+because three hand-maintained copies of it would disagree within a month.
+
+`openapi.json` cannot carry it: the specification declares *that* an operation is
+secured, and the permission strings appear nowhere in it.
+
+| | Route | Requires |
+| --- | --- | --- |
+| POST | `/api/auth/login` · `/api/auth/refresh` · `/api/auth/logout` | public |
+| GET | `/api/auth/session` | any authenticated user |
+| GET | `/api/health` · `/api/health/live` · `/api/health/ready` | public |
+| GET | `/api/users` · `/api/users/:id` | `user:read` |
+| GET | `/api/dashboard/summary` · `kpi` · `chart` · `table` | `dashboard:read` |
+| GET | `/api/dashboards/:dashboardId` · `/personalization` | `dashboard:read` |
+| PUT | `/api/dashboards/:dashboardId` · `/personalization` | `dashboard:write` |
+| POST · PATCH · DELETE | `/api/dashboards/:dashboardId/presets…` | `dashboard:write` |
+| GET | `/api/graphs` · `/:graphId` · `/topology/snapshot` · `/topology/resync` | `graph:read` |
+| POST · PUT · DELETE | `/api/graphs` · `/:graphId` · `/content` · `/topology/events` | `graph:write` |
+| GET | `/api/live/broadcasts` · `/:broadcastId` · `/chat/messages` | `live:read` |
+| POST | `/api/live/broadcasts/:broadcastId/playback-session` | `live:read` |
+| POST | `/api/live/broadcasts/:broadcastId/status` | `live:manage` |
+| POST | `/api/live/broadcasts/:broadcastId/chat/messages` | `chat:write` |
+| DELETE · POST | `.../chat/messages/:messageId` · `.../chat/mutes` | `chat:moderate` |
+
+Thirty-eight operations. Two of them — `/api/users` and `/api/users/:id` — were
+in no document at all before this table.
+
 ### Login throttling
 
 `LOGIN_ATTEMPTS` is a token bound to an in-process fixed-window counter. Two
