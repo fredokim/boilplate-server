@@ -2,7 +2,7 @@
   "name": "boilplate-server",
   "version": "0.1.0",
   "private": true,
-  "description": "NestJS backend foundation for the React boilerplate.",
+  "description": "Shared NestJS backend for the React, Vue, and Next.js boilerplates.",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
@@ -28,6 +28,7 @@
     "test:integration": "jest --config ./test/jest-integration.json",
     "check:env": "npm run build && node dist/tools/checkEnvExample.js",
     "release": "npm run build && node dist/tools/release.js",
+    "release:quick": "npm run build && node dist/tools/release.js --quick",
     "check:protocol": "npm run build && node dist/tools/checkProtocolExports.js"
   },
   "dependencies": {

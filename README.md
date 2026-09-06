@@ -1,33 +1,65 @@
 # boilplate-server
 
-Shared NestJS backend for the React, Vue, and Next.js boilerplates.
+The NestJS backend the React, Vue and Next.js boilerplates share. TypeScript,
+PostgreSQL and Prisma, providing auth, the dashboard, the graph and topology
+stream, and live broadcast with chat.
 
-It was extracted from `react-boilerplate/server/` with its history, because
-three frontends now share it and it could no longer live inside one of them.
-Each frontend proxies `/api` here — see [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for why that is a
-requirement rather than a convenience.
+It was extracted from `react-boilerplate/server/` with its history, because three
+frontends came to share it and it could no longer live inside one of them.
 
-NestJS + TypeScript + PostgreSQL + Prisma backend for the React boilerplate.
+**Each frontend chooses its own data source.** All three ship MSW and run
+entirely on mocks by default; a data-mode environment variable opts into this
+server instead — `VITE_DATA_MODE` in React and Vue, `BACKEND_URL` with
+`NEXT_PUBLIC_DATA_MODE` in Next. MSW is not a leftover: it is how the tests run,
+how Storybook renders, and how someone clones one frontend and has a working
+application with no backend at all.
 
-The foundation — configuration, the shared API envelope, validation, error
-handling, logging, health probes, OpenAPI — plus the auth, dashboard, graph, and
-live/chat modules. See
-[ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for where they go.
+**In production all three run against this server**, and the browser sees a
+single origin because each frontend proxies or rewrites `/api` here — a Vite
+proxy or Next rewrite in development, a rewrite on whatever host serves the build
+in production. That is a requirement rather than a convenience: the refresh
+cookie is `sameSite=lax` and would not survive a cross-origin call. See
+[DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md).
 
-**The frontend is untouched.** MSW still serves the app and no client code points
-at this server.
+For where each responsibility lives — the shared envelope, validation, error
+handling, logging, health probes, OpenAPI — see
+[ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 
 ---
 
 ## Getting started
 
+Every command in this document runs from the root of **this** repository. The
+server used to live in `react-boilerplate/server/`, and nothing here is a
+subdirectory of a frontend any more.
+
 ```bash
-cd server
 npm install                 # postinstall runs `prisma generate`
-cp .env.example .env        # required: Prisma and the config validator both read it
-npm run db:up               # start PostgreSQL in Docker
+```
+
+Copy `.env.example` to `.env` — Prisma and the config validator both read it:
+
+```bash
+cp .env.example .env        # macOS, Linux, Git Bash
+```
+
+```console
+copy .env.example .env      :: Windows cmd
+```
+
+Then start PostgreSQL, apply the migrations, and run the server:
+
+```bash
+npm run db:up               # PostgreSQL in Docker
+npm run prisma:deploy       # apply the committed migrations
+npm run prisma:seed         # optional; needs SEED_ADMIN_* in .env
 npm run start:dev
 ```
+
+`prisma:deploy` applies migrations that already exist, which is what a fresh
+checkout and a deployment both need. Use `npm run prisma:migrate -- --name <name>`
+only when you are *authoring* a new migration — it diffs the schema, writes a new
+migration directory, and applies it.
 
 The API is at `http://localhost:3001/api` and the docs at
 `http://localhost:3001/api/docs`.
@@ -49,21 +81,53 @@ one, liveness passes, and readiness reports the failure. That is deliberate; see
 | `npm run start:dev` | Watch-mode server |
 | `npm start` | Run the built server (`npm run build` first) |
 | `npm run build` | Compile to `dist/` |
-| `npm run typecheck` | `tsc --noEmit` over src, test, and prisma |
 | `npm run lint` | ESLint, zero warnings tolerated |
+| `npm run typecheck` | `tsc --noEmit` over src, test, and prisma |
 | `npm test` | Unit tests |
-| `npm run test:e2e` | End-to-end tests over real HTTP |
-| `npm run openapi:generate` | Build, then write `openapi.json` |
-| `npm run db:up` / `db:down` | Local PostgreSQL via Docker Compose |
-| `npm run prisma:validate` | Check `schema.prisma` |
-| `npm run prisma:migrate` | Create and apply a migration |
-| `npm run prisma:deploy` | Apply committed migrations (deployment) |
-| `npm run prisma:seed` | Run the seed script |
+| `npm run test:e2e` | End-to-end tests over real HTTP, no database |
 | `npm run test:integration` | Tests that need a real PostgreSQL (see below) |
+| `npm run db:up` / `db:down` | Local PostgreSQL via Docker Compose |
+| `npm run prisma:validate` | Check `schema.prisma` parses and is coherent |
+| `npm run prisma:deploy` | Apply the committed migrations |
+| `npm run prisma:migrate -- --name <name>` | Author a new migration, then apply it |
+| `npm run prisma:seed` | Run the seed script |
+| `npm run openapi:generate` | Build, then write `openapi.json` |
 | `npm run openapi:check` | Fails when the committed spec drifts from the code |
+| `npm run docs:check` | Documents name only scripts and paths that exist, links resolve, everything is reachable from this README |
+| `npm run check:env` | Every variable the server reads is in `.env.example` |
+| `npm run check:protocol` | Every declaration in a protocol file is spoken by something |
+| `npm run check` | The `&&` chain of the core checks. Stops at the first failure |
+| `npm run release` | **Every** gate, including the ones needing PostgreSQL and Docker |
+| `npm run release:quick` | The same, minus the three heavy gates |
 
-The same commands are reachable from the repository root as `server:*` — see the
-root README.
+### `check`, `release`, and `release:quick`
+
+`check` is the old chain — lint, typecheck, tests, build, OpenAPI drift, docs —
+joined with `&&`. It stops at the first failure, which is fine when you expect it
+to pass and unhelpful when it does not.
+
+`release` is the one that answers "is this ready to ship". It runs **every** gate,
+reports each by name, and does not stop at the first failure, so one run tells you
+everything that is wrong rather than the first thing. Three of its gates need
+things a laptop may not have:
+
+| Heavy gate | Needs |
+| --- | --- |
+| `integration` | a real PostgreSQL (`DATABASE_URL` set and reachable) |
+| `migrations` | the same database, for `prisma migrate status` |
+| `image` | Docker, to build the production image |
+
+`release:quick` skips **exactly those three** and runs everything else: Prisma
+format and validate, the document check, the environment contract, the protocol
+export check, lint, typecheck, unit tests, e2e tests, build, OpenAPI drift, and
+the production dependency audit.
+
+**A skipped gate is reported as `skipped`, never as a pass.** A quick run that
+finds nothing wrong does not say the repository is ready to release — it says
+which gates did not run and what would let them. Deciding a release is fine
+because four gates never executed is the failure this arrangement exists to
+prevent.
+
 
 ---
 
@@ -168,20 +232,45 @@ CI runs them against a PostgreSQL service container, along with
 `prisma migrate deploy`, `migrate status`, a migrations-versus-schema drift check,
 and the seed.
 
+## Verifying a release
+
+| | Runs where | Covers |
+| --- | --- | --- |
+| `npm run release:quick` | Any machine. No PostgreSQL, no Docker | Everything except the three heavy gates |
+| `npm run release` | A machine with a reachable `DATABASE_URL` **and** Docker | All of it |
+| GitHub CI | Every push and pull request | The heavy gates too — a PostgreSQL service container for `integration` and `migrations`, and a `docker` job that builds the image, runs it, and checks the migration step works inside it |
+
+The heavy gates skip in CI's main job on purpose, and the reason they print names
+the job that covers them instead — `covered by the integration job`, `covered by
+the docker job`. They are not being waved through.
+
+**A green `release:quick` is not a green release.** It is the whole of the answer
+minus three questions, and the summary says which three. If you need the full
+answer on a laptop, start the database and Docker; if you need it in CI, it is
+already there.
+
+---
+
 ## Limitations
 
-- **These migrations were authored offline.** The machine this was written on has
-  neither Docker nor PostgreSQL, so every migration was generated with
-  `prisma migrate diff` rather than by applying it. The CI `integration` job is
-  what proves they run; until it has run at least once, treat that as unverified
-  locally.
+- **The migrations were authored offline** — the machine this was written on has
+  neither Docker nor PostgreSQL, so each was generated with `prisma migrate diff`
+  rather than by applying it. They are no longer unverified: the CI `integration`
+  job applies them against a PostgreSQL service container on every push, checks
+  `migrate status`, diffs the schema against the migration history, and runs the
+  seed twice. What remains true is that a machine without a database cannot prove
+  this locally — `npm run release` reports those gates as skipped rather than
+  passed.
 - **Login throttling is per-process.** Correct for one instance, wrong for
   several. `LOGIN_ATTEMPTS` is the seam for Redis.
 - **A database outage during login answers 500, not 503.** The readiness probe
   reports the real cause; the login endpoint does not yet distinguish "the
   database is down" from any other unexpected failure.
-- **The frontend still uses MSW.** No client code points at this server by
-  default; both server modes are opt-in environment flags.
+- **All three frontends default to MSW.** Pointing one at this server is an
+  opt-in environment flag, so a clone runs with no backend and the default path
+  through each application is the mocked one. That is deliberate, and it means
+  the server-backed path gets less exercise from casual use than the mock path
+  does.
 - **Realtime fan-out is per-process**, for both topology and chat. An event
   published on one instance never reaches a client connected to another.
   `TopologyBroadcaster` and `ChatBroadcaster` are the seams for Redis.
@@ -196,13 +285,20 @@ and the seed.
 ## Database
 
 ```bash
-npm run db:up                              # PostgreSQL on localhost:5432
-npm run prisma:migrate -- --name add_auth  # once there are models
+npm run db:up                                # PostgreSQL on localhost:5432
+npm run prisma:deploy                        # apply what is committed
 npm run prisma:seed
 ```
 
+Authoring a new migration is the other command, and it is not the same thing:
+
+```bash
+npm run prisma:migrate -- --name add_something   # diff, write, apply
+```
+
 The first migration, `20260831000000_add_auth`, creates `Role`, `User`, and
-`RefreshSession`. It has not been applied anywhere — see Limitations above.
+`RefreshSession`. CI applies the full history on every push; see Limitations for
+what that does and does not prove locally.
 
 `prisma migrate reset` will not seed automatically — the `package.json#prisma`
 hook that used to do that is deprecated in Prisma 6.19 and removed in Prisma 7.

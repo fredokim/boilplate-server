@@ -6,12 +6,28 @@
  * `AUTH_REQUIRED` contract as if one frontend depended on it when all three do.
  * Neither was caught, because nothing looked.
  *
- * Four rules, all mechanical:
+ * Five rules, all mechanical:
  *
  *   1. `npm run x` in a document must be a script in package.json.
  *   2. A backticked repository path must exist.
  *   3. A relative Markdown link must resolve.
  *   4. Every document must be reachable by following links from the README.
+ *   5. `cd <dir>` must name a directory that exists, or one the document just made.
+ *
+ * Rule 5 is the one this repository needed. The README opened its instructions
+ * with `cd server` for months after the server stopped being
+ * `react-boilerplate/server/` and became this repository — so the first command a
+ * reader ran failed, and nothing noticed.
+ *
+ * It is deliberately a rule about directories rather than about that phrase. A
+ * check that banned the literal string "cd server" would pass the moment someone
+ * wrote `cd ./server`, and would say nothing about any other wrong directory. It
+ * would also be the shape of check this project has already deleted once: an
+ * assertion about the spelling of a document rather than about whether it is
+ * true. The other pre-split claims found in the same audit — a root `server:*`
+ * command set that no longer exists, and "no client code points at this server" —
+ * are not mechanically checkable and are not checked here. Rule 1 already catches
+ * the first if it is ever written as an actual `npm run server:x`.
  *
  * Rules 3 and 4 came from the frontends, where twenty-two documents sat in the
  * root linking to each other zero times. This repository has four and already
@@ -35,13 +51,14 @@ const HISTORICAL_DIRS = ['docs/history/'];
 /** Prefixes that name something in this repository rather than an npm package or a URL. */
 const PATH_ROOTS = ['src', 'prisma', 'scripts', 'tools', 'test', 'docs', 'config', 'dist'];
 
-type Problem = { doc: string; kind: 'script' | 'path' | 'link' | 'orphan'; detail: string };
+type Problem = { doc: string; kind: 'script' | 'path' | 'link' | 'orphan' | 'directory'; detail: string };
 
 const KIND_LABEL: Record<Problem['kind'], string> = {
   script: 'no such script',
   path: 'no such path',
   link: 'link goes nowhere',
   orphan: 'nothing links to this document',
+  directory: 'no such directory to change into',
 };
 
 /** Where the walk starts. What the README cannot reach, a reader cannot either. */
@@ -71,6 +88,17 @@ function trackedDocs(): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Directories the document itself creates before entering them.
+ *
+ * The non-ASCII reproduction in the README does `mkdir t` and then `cd t`, which
+ * is correct and would fail a rule that only asked whether `t` is in the
+ * repository.
+ */
+function createdHere(text: string): Set<string> {
+  return new Set([...text.matchAll(/\bmkdir(?:\s+-p)?\s+([A-Za-z0-9_./-]+)/g)].flatMap((match) => (match[1] === undefined ? [] : [match[1]])));
+}
+
 function isHistorical(doc: string, text: string): boolean {
   return HISTORICAL_DIRS.some((dir) => doc.startsWith(dir)) || text.includes(HISTORICAL_MARKER);
 }
@@ -97,6 +125,21 @@ function main(): void {
     }
 
     if (isHistorical(doc, text)) continue;
+
+    const created = createdHere(text);
+
+    for (const match of text.matchAll(/(?:^|[;&|]|&&)\s*cd\s+([A-Za-z0-9_./-]+)/gm)) {
+      const target = match[1];
+
+      if (target === undefined) continue;
+      // Somewhere else on the machine, not a claim about this repository.
+      if (target.startsWith('~') || target.startsWith('/') || target.startsWith('..')) continue;
+      if (created.has(target)) continue;
+
+      const normalised = target.replace(/^\.\//, '');
+
+      if (!existsSync(resolve(ROOT, normalised))) problems.push({ doc, kind: 'directory', detail: `cd ${target}` });
+    }
 
     for (const match of text.matchAll(/npm run ([a-z0-9:_-]+)/g)) {
       const script = match[1];
