@@ -18,32 +18,17 @@ jobs:
       # postinstall runs `prisma generate`, which needs no database.
       - run: npm ci
 
-      # Prisma checks come first: a schema that does not validate makes every
-      # later failure a symptom rather than a cause.
-      - run: npx prisma format --check
-      - run: npx prisma validate
+      # Every gate, from `src/tools/release.ts`, which is the same list
+      # `npm run release` runs locally. It used to be eleven steps here and a
+      # separate `&&` chain in package.json — two lists that can disagree about
+      # what green means, and did.
+      #
+      # `prisma validate` needs a URL to parse even though it connects to
+      # nothing, so the runner inherits one. The gates that need a real database
+      # skip here and are covered by the integration job below, which has one.
+      - run: npm run release
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
-
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run test
-      - run: npm run test:e2e
-      - run: npm run build
-
-      # Fails when the committed openapi.json no longer matches the code. A spec
-      # that silently falls behind is worse than none: it looks authoritative
-      # while describing an API that no longer exists.
-      - run: node dist/tools/checkOpenApiDrift.js
-
-      # Fails when a document names an npm script or a repository path that does
-      # not exist. The README described a server directory that had moved to its
-      # own repository for weeks, and nothing noticed.
-      - run: node dist/tools/checkDocs.js
-
-      # Production dependencies only. The remaining dev-tree advisory has no
-      # upstream fix and cannot reach a deployed artefact.
-      - run: npm audit --omit=dev --audit-level=moderate
 
   # Everything that needs a real PostgreSQL, and nothing that does not.
   #

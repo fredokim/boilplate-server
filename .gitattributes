@@ -3,3 +3,9 @@
 # the check for a reason that has nothing to do with the API.
 openapi.json text eol=lf
 prisma/migrations/**/*.sql text eol=lf
+
+# Same reason, found later: `prisma format --check` writes LF, so on a Windows
+# checkout it called the whole schema unformatted. CI never saw it, because CI
+# checks out on Linux — which is exactly the kind of failure that only appears
+# to the person trying to run the gate locally.
+prisma/schema.prisma text eol=lf
