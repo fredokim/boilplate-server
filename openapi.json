@@ -4670,6 +4670,52 @@
           "edges"
         ]
       },
+      "TopologyEventDto": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "description": "Identifies this event. Clients de-duplicate on it."
+          },
+          "topologyId": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string",
+            "description": "The node or edge the event acts on."
+          },
+          "timestamp": {
+            "type": "number",
+            "description": "Wall clock. Orders nothing."
+          },
+          "sequence": {
+            "type": "number",
+            "description": "Orders events within a graph. A resume continues from it."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "NODE_STATUS_CHANGED",
+              "EDGE_STATUS_CHANGED",
+              "NODE_METRIC_UPDATED",
+              "EDGE_METRIC_UPDATED"
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "description": "Either { status } for a status change or { metrics } for a metric update."
+          }
+        },
+        "required": [
+          "eventId",
+          "topologyId",
+          "entityId",
+          "timestamp",
+          "sequence",
+          "type",
+          "payload"
+        ]
+      },
       "TopologyReplayDto": {
         "type": "object",
         "properties": {
@@ -4684,7 +4730,7 @@
           "events": {
             "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/TopologyEventDto"
             }
           }
         },

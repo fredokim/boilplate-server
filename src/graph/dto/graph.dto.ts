@@ -131,7 +131,40 @@ export class TopologySnapshotDto {
   @ApiProperty({ type: Object }) edges!: Record<string, unknown>;
 }
 
+/**
+ * The realtime event, published.
+ *
+ * It was not in this document at all: `TopologyReplayDto.events` was
+ * `unknown[]`, so the one object three frontends dedupe and order on had no
+ * contract behind it. `topologyEvent.ts` already warned about exactly that —
+ * "getting a field name wrong here does not fail a build, it makes every event
+ * look like an unknown entity and the graph quietly stops updating" — and
+ * nothing was checking.
+ *
+ * The two number fields are the ones worth reading twice. `sequence` orders
+ * events and is what a resume continues from; `timestamp` is a wall clock and
+ * orders nothing. A graph's `version` is a third number, on the document rather
+ * than here, and it is what an optimistic lock compares.
+ */
+export class TopologyEventDto {
+  @ApiProperty({ description: 'Identifies this event. Clients de-duplicate on it.' }) eventId!: string;
+  @ApiProperty() topologyId!: string;
+  @ApiProperty({ description: 'The node or edge the event acts on.' }) entityId!: string;
+  @ApiProperty({ description: 'Wall clock. Orders nothing.' }) timestamp!: number;
+  @ApiProperty({ description: 'Orders events within a graph. A resume continues from it.' }) sequence!: number;
+  @ApiProperty({
+    enum: ['NODE_STATUS_CHANGED', 'EDGE_STATUS_CHANGED', 'NODE_METRIC_UPDATED', 'EDGE_METRIC_UPDATED'],
+  })
+  type!: string;
+
+  @ApiProperty({
+    type: Object,
+    description: 'Either { status } for a status change or { metrics } for a metric update.',
+  })
+  payload!: Record<string, unknown>;
+}
+
 export class TopologyReplayDto {
   @ApiProperty({ enum: ['up-to-date', 'replay', 'resync'] }) decision!: string;
-  @ApiProperty({ type: [Object] }) events!: unknown[];
+  @ApiProperty({ type: [TopologyEventDto] }) events!: TopologyEventDto[];
 }
