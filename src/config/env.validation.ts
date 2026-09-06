@@ -186,7 +186,7 @@ export function validateEnvironment(raw: Record<string, unknown>): EnvironmentVa
     // server moved out of the monorepo.
     const remedy =
       raw.NODE_ENV === 'production'
-        ? "Set these in the platform's environment for this service. See DEPLOYMENT.md."
+        ? "Set these in the platform's environment for this service. See docs/deployment/DEPLOYMENT.md."
         : 'Copy .env.example to .env and fill in the values above.';
 
     throw new Error(
