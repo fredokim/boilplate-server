@@ -62,7 +62,10 @@ export class SendChatMessageDto {
    */
   @IsString()
   @Length(1, 128)
-  @ApiProperty({ description: 'Client-generated id. A retry with the same id returns the stored message.' })
+  @ApiProperty({
+    description:
+      'Client-generated id for this send attempt. A retry with the same id returns the stored message rather than posting twice. It never becomes the message id and it never orders anything.',
+  })
   clientMessageId!: string;
 
   @IsString()
@@ -71,15 +74,42 @@ export class SendChatMessageDto {
   body!: string;
 }
 
+/**
+ * A stored message.
+ *
+ * Three of these fields identify or order it, and they are not interchangeable:
+ *
+ * - `id` names the stored row. Clients de-duplicate on it.
+ * - `clientMessageId` names the *send attempt*. It exists so a retry after a
+ *   timeout is stored once, and it orders nothing — it is chosen by a client
+ *   that has no idea what anyone else is sending.
+ * - `sequence` is the room's order and the resume point.
+ *
+ * `sentAt` is a fourth number in disguise and orders nothing either.
+ */
 export class ChatMessageDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() clientMessageId!: string;
+  @ApiProperty({ description: 'The stored row. Clients de-duplicate on it.' }) id!: string;
+
+  @ApiProperty({
+    description: 'The send attempt, chosen by the sender. Makes a retry idempotent; orders nothing.',
+  })
+  clientMessageId!: string;
+
   @ApiProperty() broadcastId!: string;
-  @ApiProperty() sequence!: number;
+
+  @ApiProperty({ description: "The room's order. Monotonic per broadcast, and what a reconnect resumes from." })
+  sequence!: number;
+
   @ApiProperty() authorId!: string;
   @ApiProperty() displayName!: string;
   @ApiProperty({ description: 'Empty for a deleted message; the row is retained for audit.' }) body!: string;
-  @ApiProperty({ description: 'Server clock. The client timestamp is not trusted or stored.' }) sentAt!: string;
+
+  @ApiProperty({
+    description:
+      'Server clock, for display. The client timestamp is not trusted or stored. Not an order — it is transaction start time, so it can disagree with sequence. Order on sequence.',
+  })
+  sentAt!: string;
+
   @ApiProperty() deleted!: boolean;
 }
 
