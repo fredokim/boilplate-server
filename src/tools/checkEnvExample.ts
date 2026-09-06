@@ -43,6 +43,19 @@ function filesUnder(dir: string): string[] {
 
 const READ = /process\.env\.([A-Z_][A-Z0-9_]*)/g;
 
+/**
+ * Comments are not code.
+ *
+ * This check failed on its own first CI run, on `process.env.X` written in the
+ * docstring above to explain what it looks for. It passed locally only because
+ * the file was still untracked and `git ls-files` had never listed it — so the
+ * check could not see itself until it was committed, which is a nice way to
+ * learn that a mention in prose is not a variable the server reads.
+ */
+function withoutComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
 /** `@IsString() DATABASE_URL!: string;` and friends — the schema names them in full caps. */
 const DECLARED = /^\s*(?:@[A-Za-z]+\([^)]*\)\s*)*([A-Z_][A-Z0-9_]*)[!?]?\s*:/gm;
 
@@ -54,7 +67,7 @@ function note(name: string, where: string): void {
 
 for (const source of SOURCES) {
   for (const file of filesUnder(source)) {
-    const contents = readFileSync(resolve(ROOT, file), 'utf8');
+    const contents = withoutComments(readFileSync(resolve(ROOT, file), 'utf8'));
 
     for (const match of contents.matchAll(READ)) {
       if (match[1]) note(match[1], file);
