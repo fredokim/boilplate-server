@@ -69,11 +69,10 @@ function databaseMissing(): string | null {
 /**
  * Cheap and structural first, so a stale document or an unformatted schema is
  * reported in seconds rather than after the end-to-end suite.
- */
-/**
- * Installing from a clean state is not a gate here. `npm ci` is the step CI
- * runs before this, and doing it locally would delete a working node_modules
- * to prove something the lockfile already decides.
+ *
+ * Installing from a clean state is not among them. `npm ci` is the step CI runs
+ * before this, and doing it locally would delete a working node_modules to
+ * prove something the lockfile already decides.
  */
 const GATES: readonly Gate[] = [
   {
